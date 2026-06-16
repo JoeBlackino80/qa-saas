@@ -4,7 +4,13 @@
       "Bash(npm -v)",
       "Bash(git --version)",
       "Bash(gh --version)",
-      "Bash(npx --yes create-next-app@latest . --ts --tailwind --eslint --app --src-dir --import-alias \"@/*\" --no-turbopack --use-npm --yes)"
+      "Bash(npx --yes create-next-app@latest . --ts --tailwind --eslint --app --src-dir --import-alias \"@/*\" --no-turbopack --use-npm --yes)",
+      "Bash(npm install *)",
+      "Bash(npm run *)",
+      "Bash(git config *)",
+      "Bash(git add *)",
+      "Bash(git commit -q -m ' *)",
+      "Bash(git remote *)"
     ]
   }
 }
