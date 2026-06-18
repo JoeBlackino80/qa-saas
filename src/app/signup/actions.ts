@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
 export async function signup(
-  _prevState: { error: string } | undefined,
+  _prevState: { error?: string; success?: string } | undefined,
   formData: FormData,
 ) {
   const email = String(formData.get("email") ?? "");
@@ -21,7 +21,7 @@ export async function signup(
   // If email confirmation is enabled there is no active session yet.
   if (!data.session) {
     return {
-      error:
+      success:
         "Účet vytvorený. Skontrolujte si email a potvrďte registráciu, potom sa prihláste.",
     };
   }

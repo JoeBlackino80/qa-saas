@@ -6,10 +6,12 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
+type AuthState = { error?: string; success?: string } | undefined;
+
 type AuthAction = (
-  prevState: { error: string } | undefined,
+  prevState: AuthState,
   formData: FormData,
-) => Promise<{ error: string } | undefined>;
+) => Promise<AuthState>;
 
 type AuthFormProps = {
   mode: "login" | "signup";
@@ -75,6 +77,12 @@ export function AuthForm({ mode, action, redirectTo }: AuthFormProps) {
         {state?.error && (
           <p className="rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">
             {state.error}
+          </p>
+        )}
+
+        {state?.success && (
+          <p className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-400">
+            {state.success}
           </p>
         )}
 

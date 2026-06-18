@@ -10,7 +10,25 @@
       "Bash(git config *)",
       "Bash(git add *)",
       "Bash(git commit -q -m ' *)",
-      "Bash(git remote *)"
+      "Bash(git remote *)",
+      "Bash(git ls-remote *)",
+      "Bash(echo \"EXIT=$?\")",
+      "mcp__9ae6853c-b9cf-4e23-8cf4-e01a3ee7bc12__get_cost",
+      "mcp__9ae6853c-b9cf-4e23-8cf4-e01a3ee7bc12__confirm_cost",
+      "mcp__9ae6853c-b9cf-4e23-8cf4-e01a3ee7bc12__create_project",
+      "mcp__9ae6853c-b9cf-4e23-8cf4-e01a3ee7bc12__get_project",
+      "mcp__9ae6853c-b9cf-4e23-8cf4-e01a3ee7bc12__apply_migration",
+      "mcp__9ae6853c-b9cf-4e23-8cf4-e01a3ee7bc12__get_project_url",
+      "mcp__9ae6853c-b9cf-4e23-8cf4-e01a3ee7bc12__get_publishable_keys",
+      "mcp__9ae6853c-b9cf-4e23-8cf4-e01a3ee7bc12__list_tables",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code} -> %{redirect_url}\\\\n\" http://localhost:3000/dashboard)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:3000/signup)",
+      "Bash(pkill -f \"next dev\")",
+      "Bash(pkill -f \"next-server\")",
+      "Bash(mkdir -p ~/.ssh)",
+      "Bash(chmod 700 ~/.ssh)",
+      "Bash(ssh-keygen -t ed25519 -C \"obchod@sorbxt.sk\" -f ~/.ssh/id_ed25519 -N \"\" -q)",
+      "Read(//Users/sorbxts.r.o./.ssh/**)"
     ]
   }
 }

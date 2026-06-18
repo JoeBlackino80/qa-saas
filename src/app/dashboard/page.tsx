@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
@@ -81,7 +82,12 @@ export default async function DashboardPage() {
                 key={p.id}
                 className="rounded-2xl border border-border bg-surface p-5 transition-colors hover:border-primary/50"
               >
-                <h3 className="font-medium">{p.name}</h3>
+                <Link
+                  href={`/dashboard/${p.id}`}
+                  className="font-medium hover:text-primary"
+                >
+                  {p.name}
+                </Link>
                 <a
                   href={p.base_url}
                   target="_blank"
@@ -90,14 +96,22 @@ export default async function DashboardPage() {
                 >
                   {p.base_url}
                 </a>
-                <p className="mt-4 text-xs text-muted">
-                  Pridané{" "}
-                  {new Date(p.created_at).toLocaleDateString("sk-SK", {
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  })}
-                </p>
+                <div className="mt-4 flex items-center justify-between">
+                  <p className="text-xs text-muted">
+                    Pridané{" "}
+                    {new Date(p.created_at).toLocaleDateString("sk-SK", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })}
+                  </p>
+                  <Link
+                    href={`/dashboard/${p.id}`}
+                    className="text-xs font-medium text-primary hover:underline"
+                  >
+                    Detail & kontroly →
+                  </Link>
+                </div>
               </li>
             ))}
           </ul>
