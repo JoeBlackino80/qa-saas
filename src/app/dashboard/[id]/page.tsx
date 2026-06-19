@@ -39,9 +39,26 @@ export default async function ProjectPage({
     .select("id, status_code, ok, response_time_ms, error, ai_report, created_at")
     .eq("project_id", id)
     .order("created_at", { ascending: false })
-    .limit(20);
+    .limit(50);
 
   const rows = (checks ?? []) as Check[];
+
+  // Stats over the loaded checks.
+  const total = rows.length;
+  const okCount = rows.filter((c) => c.ok).length;
+  const uptime = total > 0 ? Math.round((okCount / total) * 100) : null;
+  const times = rows
+    .filter((c) => c.response_time_ms !== null)
+    .map((c) => c.response_time_ms as number);
+  const avgMs =
+    times.length > 0
+      ? Math.round(times.reduce((a, b) => a + b, 0) / times.length)
+      : null;
+  const lastOnline = rows[0]?.ok ?? null;
+
+  // Oldest → newest for the chart.
+  const chart = [...rows].reverse();
+  const maxMs = Math.max(1, ...times);
 
   return (
     <div className="flex flex-1 flex-col">
@@ -75,6 +92,65 @@ export default async function ProjectPage({
             AI report je vypnutý – doplňte <code>ANTHROPIC_API_KEY</code> do
             <code> .env.local</code>. Kontrola dostupnosti funguje aj bez neho.
           </p>
+        )}
+
+        {total > 0 && (
+          <div className="mb-8 grid gap-4 sm:grid-cols-3">
+            <div className="rounded-2xl border border-border bg-surface p-5">
+              <p className="text-xs uppercase tracking-wide text-muted">Stav</p>
+              <p
+                className={`mt-1 text-2xl font-semibold ${
+                  lastOnline ? "text-emerald-400" : "text-danger"
+                }`}
+              >
+                {lastOnline ? "Online" : "Offline"}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-border bg-surface p-5">
+              <p className="text-xs uppercase tracking-wide text-muted">
+                Uptime ({total} kontrol)
+              </p>
+              <p className="mt-1 text-2xl font-semibold">{uptime}%</p>
+            </div>
+            <div className="rounded-2xl border border-border bg-surface p-5">
+              <p className="text-xs uppercase tracking-wide text-muted">
+                Priemerná odozva
+              </p>
+              <p className="mt-1 text-2xl font-semibold">
+                {avgMs !== null ? `${avgMs} ms` : "—"}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {chart.length > 1 && (
+          <div className="mb-8 rounded-2xl border border-border bg-surface p-5">
+            <p className="mb-3 text-xs uppercase tracking-wide text-muted">
+              Odozva v čase (ms)
+            </p>
+            <div className="flex h-28 items-end gap-1">
+              {chart.map((c) => {
+                const h =
+                  c.response_time_ms !== null
+                    ? Math.max(4, (c.response_time_ms / maxMs) * 100)
+                    : 100;
+                return (
+                  <div
+                    key={c.id}
+                    title={
+                      c.ok
+                        ? `${c.response_time_ms} ms`
+                        : c.error ?? "offline"
+                    }
+                    className={`flex-1 rounded-t ${
+                      c.ok ? "bg-primary/70" : "bg-danger/70"
+                    }`}
+                    style={{ height: `${h}%` }}
+                  />
+                );
+              })}
+            </div>
+          </div>
         )}
 
         <h2 className="mb-4 text-sm font-medium uppercase tracking-wide text-muted">

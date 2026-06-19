@@ -28,7 +28,8 @@
       "Bash(mkdir -p ~/.ssh)",
       "Bash(chmod 700 ~/.ssh)",
       "Bash(ssh-keygen -t ed25519 -C \"obchod@sorbxt.sk\" -f ~/.ssh/id_ed25519 -N \"\" -q)",
-      "Read(//Users/sorbxts.r.o./.ssh/**)"
+      "Read(//Users/sorbxts.r.o./.ssh/**)",
+      "Bash(git push *)"
     ]
   }
 }

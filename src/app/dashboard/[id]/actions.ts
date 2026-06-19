@@ -2,8 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { runWebsiteCheck } from "@/lib/checks";
-import { generateQaReport } from "@/lib/anthropic";
+import { performCheck } from "@/lib/run-check";
 
 export async function runCheck(
   _prevState: { error?: string } | undefined,
@@ -21,33 +20,19 @@ export async function runCheck(
   // Fetch the project (RLS guarantees ownership).
   const { data: project, error: projErr } = await supabase
     .from("projects")
-    .select("id, base_url")
+    .select("id, name, base_url")
     .eq("id", projectId)
     .single();
 
   if (projErr || !project) return { error: "Projekt sa nenašiel." };
 
-  // Run the availability check, then optionally the AI report.
-  const result = await runWebsiteCheck(project.base_url);
-
-  let aiReport: string | null = null;
   try {
-    aiReport = await generateQaReport(project.base_url, result);
-  } catch {
-    aiReport = null; // AI report is best-effort; never block the check.
+    await performCheck(supabase, project, user.id);
+  } catch (err) {
+    return {
+      error: err instanceof Error ? err.message : "Kontrola zlyhala.",
+    };
   }
-
-  const { error: insErr } = await supabase.from("checks").insert({
-    project_id: project.id,
-    user_id: user.id,
-    status_code: result.statusCode,
-    ok: result.ok,
-    response_time_ms: result.responseTimeMs,
-    error: result.error,
-    ai_report: aiReport,
-  });
-
-  if (insErr) return { error: insErr.message };
 
   revalidatePath(`/dashboard/${projectId}`);
   return undefined;
