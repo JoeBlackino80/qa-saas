@@ -111,9 +111,14 @@ function ProjectDetail() {
           </a>
         </div>
         <div className="flex flex-col items-end gap-2">
-          <Button onClick={runCheck} disabled={running}>
-            {running ? "Kontrolujem…" : "Spustiť kontrolu"}
-          </Button>
+          <div className="flex gap-2">
+            <Link href={`/report?id=${project.id}`}>
+              <Button variant="ghost">📄 Klientsky report</Button>
+            </Link>
+            <Button onClick={runCheck} disabled={running}>
+              {running ? "Kontrolujem…" : "Spustiť kontrolu"}
+            </Button>
+          </div>
           {error && <p className="text-sm text-danger">{error}</p>}
         </div>
       </div>
