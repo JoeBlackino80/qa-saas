@@ -69,10 +69,17 @@ function StatusView() {
     <>
       <div className="mb-8 flex items-center gap-4">
         <span
-          className={`h-4 w-4 rounded-full ${
-            lastOnline ? "bg-emerald-400" : "bg-danger"
-          }`}
-        />
+          className={`relative flex h-3.5 w-3.5 ${lastOnline ? "" : ""}`}
+        >
+          {lastOnline && (
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-ok opacity-60" />
+          )}
+          <span
+            className={`relative inline-flex h-3.5 w-3.5 rounded-full ${
+              lastOnline ? "bg-ok" : "bg-danger"
+            }`}
+          />
+        </span>
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">
             {project.name}
@@ -82,7 +89,7 @@ function StatusView() {
         <span
           className={`ml-auto rounded-full px-3 py-1 text-sm font-medium ${
             lastOnline
-              ? "bg-emerald-500/15 text-emerald-400"
+              ? "bg-ok/15 text-ok"
               : "bg-danger/15 text-danger"
           }`}
         >
@@ -99,7 +106,7 @@ function StatusView() {
           <p className="text-xs uppercase tracking-wide text-muted">
             Dostupnosť ({total})
           </p>
-          <p className="mt-1 text-2xl font-semibold">
+          <p className="tabular mt-1 text-2xl font-semibold">
             {uptime !== null ? `${uptime}%` : "—"}
           </p>
         </div>
@@ -107,7 +114,7 @@ function StatusView() {
           <p className="text-xs uppercase tracking-wide text-muted">
             Priemerná odozva
           </p>
-          <p className="mt-1 text-2xl font-semibold">
+          <p className="tabular mt-1 text-2xl font-semibold">
             {avgMs !== null ? `${avgMs} ms` : "—"}
           </p>
         </div>
@@ -128,7 +135,7 @@ function StatusView() {
           <p className="mb-3 text-xs uppercase tracking-wide text-muted">
             Odozva v čase (ms)
           </p>
-          <div className="flex h-24 items-end gap-1">
+          <div className="flex h-24 items-end gap-[3px]">
             {chart.map((c) => {
               const h =
                 c.response_time_ms !== null
@@ -138,8 +145,10 @@ function StatusView() {
                 <div
                   key={c.id}
                   title={c.ok ? `${c.response_time_ms} ms` : "offline"}
-                  className={`flex-1 rounded-t ${
-                    c.ok ? "bg-primary/70" : "bg-danger/70"
+                  className={`flex-1 rounded-t-sm ${
+                    c.ok
+                      ? "bg-gradient-to-t from-primary/30 to-primary/80 opacity-80"
+                      : "bg-danger/80"
                   }`}
                   style={{ height: `${h}%` }}
                 />

@@ -138,21 +138,70 @@ function ProjectDetail() {
         </div>
       </div>
 
-      <div className="mb-8 flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-surface p-4">
+      {total > 0 && (
+        <div className="mb-6 flex animate-in flex-wrap items-center gap-6 rounded-2xl border border-border bg-surface px-6 py-5">
+          <div className="flex items-center gap-3.5">
+            <span
+              className={`grid h-10 w-10 place-items-center rounded-full ${
+                lastOnline ? "bg-ok/15" : "bg-danger/15"
+              }`}
+            >
+              <span
+                className={`h-3 w-3 rounded-full ${
+                  lastOnline ? "bg-ok" : "bg-danger"
+                }`}
+              />
+            </span>
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted">Stav</p>
+              <p
+                className={`text-2xl font-semibold ${
+                  lastOnline ? "text-ok" : "text-danger"
+                }`}
+              >
+                {lastOnline ? "Online" : "Offline"}
+              </p>
+            </div>
+          </div>
+          <div className="ml-auto flex gap-8 sm:gap-10">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted">
+                Uptime
+              </p>
+              <p className="tabular mt-0.5 text-2xl font-semibold">{uptime}%</p>
+              <p className="text-xs text-muted">{total} kontrol</p>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted">
+                Odozva
+              </p>
+              <p className="tabular mt-0.5 text-2xl font-semibold">
+                {avgMs !== null ? avgMs : "—"}
+                <span className="ml-0.5 text-sm font-normal text-muted">ms</span>
+              </p>
+              <p className="text-xs text-muted">priemer</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="mb-8 flex items-center gap-4 rounded-2xl border border-border bg-surface px-5 py-4">
         <button
           onClick={togglePublic}
-          className={`relative h-6 w-11 rounded-full transition-colors ${
-            project.public_status ? "bg-primary" : "bg-surface-2"
-          }`}
+          role="switch"
+          aria-checked={Boolean(project.public_status)}
           aria-label="Verejný status page"
+          className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
+            project.public_status ? "bg-primary" : "bg-surface-2 border border-border"
+          }`}
         >
           <span
-            className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
-              project.public_status ? "translate-x-5" : "translate-x-0.5"
+            className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${
+              project.public_status ? "translate-x-6" : "translate-x-1"
             }`}
           />
         </button>
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           <p className="text-sm font-medium">Verejný status page</p>
           <p className="text-xs text-muted">
             Zdieľateľná stránka so stavom webu pre klienta (bez prihlásenia).
@@ -163,48 +212,22 @@ function ProjectDetail() {
             href={`/status/?id=${project.id}`}
             target="_blank"
             rel="noreferrer"
-            className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-primary hover:bg-surface-2"
+            className="shrink-0 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-surface-2"
           >
             Otvoriť status page →
           </a>
         )}
       </div>
 
-      {total > 0 && (
-        <div className="mb-8 grid gap-4 sm:grid-cols-3">
-          <div className="rounded-2xl border border-border bg-surface p-5">
-            <p className="text-xs uppercase tracking-wide text-muted">Stav</p>
-            <p
-              className={`mt-1 text-2xl font-semibold ${
-                lastOnline ? "text-emerald-400" : "text-danger"
-              }`}
-            >
-              {lastOnline ? "Online" : "Offline"}
-            </p>
-          </div>
-          <div className="rounded-2xl border border-border bg-surface p-5">
-            <p className="text-xs uppercase tracking-wide text-muted">
-              Uptime ({total} kontrol)
-            </p>
-            <p className="mt-1 text-2xl font-semibold">{uptime}%</p>
-          </div>
-          <div className="rounded-2xl border border-border bg-surface p-5">
-            <p className="text-xs uppercase tracking-wide text-muted">
-              Priemerná odozva
-            </p>
-            <p className="mt-1 text-2xl font-semibold">
-              {avgMs !== null ? `${avgMs} ms` : "—"}
-            </p>
-          </div>
-        </div>
-      )}
-
       {chart.length > 1 && (
-        <div className="mb-8 rounded-2xl border border-border bg-surface p-5">
-          <p className="mb-3 text-xs uppercase tracking-wide text-muted">
-            Odozva v čase (ms)
-          </p>
-          <div className="flex h-28 items-end gap-1">
+        <div className="mb-8 animate-in rounded-2xl border border-border bg-surface p-5">
+          <div className="mb-4 flex items-baseline justify-between">
+            <p className="text-xs uppercase tracking-wide text-muted">
+              Odozva v čase
+            </p>
+            <p className="tabular text-xs text-muted">max {maxMs} ms</p>
+          </div>
+          <div className="flex h-28 items-end gap-[3px]">
             {chart.map((c) => {
               const h =
                 c.response_time_ms !== null
@@ -214,8 +237,10 @@ function ProjectDetail() {
                 <div
                   key={c.id}
                   title={c.ok ? `${c.response_time_ms} ms` : c.error ?? "offline"}
-                  className={`flex-1 rounded-t ${
-                    c.ok ? "bg-primary/70" : "bg-danger/70"
+                  className={`flex-1 rounded-t-sm transition-opacity hover:opacity-100 ${
+                    c.ok
+                      ? "bg-gradient-to-t from-primary/30 to-primary/80 opacity-80"
+                      : "bg-danger/80"
                   }`}
                   style={{ height: `${h}%` }}
                 />
@@ -237,29 +262,34 @@ function ProjectDetail() {
       ) : (
         <ul className="flex flex-col gap-3">
           {rows.map((c) => (
-            <li key={c.id} className="rounded-2xl border border-border bg-surface p-5">
+            <li
+              key={c.id}
+              className="rounded-2xl border border-border bg-surface p-5 transition-colors hover:border-border/60"
+            >
               <div className="flex flex-wrap items-center gap-3">
                 <span
                   className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
-                    c.ok
-                      ? "bg-emerald-500/15 text-emerald-400"
-                      : "bg-danger/15 text-danger"
+                    c.ok ? "bg-ok/15 text-ok" : "bg-danger/15 text-danger"
                   }`}
                 >
                   <span
                     className={`h-1.5 w-1.5 rounded-full ${
-                      c.ok ? "bg-emerald-400" : "bg-danger"
+                      c.ok ? "bg-ok" : "bg-danger"
                     }`}
                   />
                   {c.ok ? "Online" : "Offline"}
                 </span>
                 {c.status_code !== null && (
-                  <span className="text-sm text-muted">HTTP {c.status_code}</span>
+                  <span className="tabular text-sm text-muted">
+                    HTTP {c.status_code}
+                  </span>
                 )}
                 {c.response_time_ms !== null && (
-                  <span className="text-sm text-muted">{c.response_time_ms} ms</span>
+                  <span className="tabular text-sm text-muted">
+                    {c.response_time_ms} ms
+                  </span>
                 )}
-                <span className="ml-auto text-xs text-muted">
+                <span className="tabular ml-auto text-xs text-muted">
                   {new Date(c.created_at).toLocaleString("sk-SK")}
                 </span>
               </div>
