@@ -17,6 +17,15 @@ function log(msg) {
   }
 }
 
+process.on("uncaughtException", (e) => {
+  log("UNCAUGHT: " + (e?.stack || e));
+  process.exit(1);
+});
+process.on("unhandledRejection", (e) => {
+  log("UNHANDLED: " + (e?.stack || e));
+  process.exit(1);
+});
+
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -29,10 +38,6 @@ if (!SUPABASE_URL || !SERVICE_KEY) {
   log("CHYBA: chýba SUPABASE_URL alebo SUPABASE_SERVICE_ROLE_KEY (GitHub secrets).");
   process.exit(1);
 }
-
-const supabase = createClient(SUPABASE_URL, SERVICE_KEY, {
-  auth: { persistSession: false },
-});
 
 function resolveUrl(baseUrl, target) {
   if (!target) return baseUrl;
@@ -73,6 +78,11 @@ async function runStep(page, baseUrl, step) {
 }
 
 async function main() {
+  log("Vytváram Supabase klienta…");
+  const supabase = createClient(SUPABASE_URL, SERVICE_KEY, {
+    auth: { persistSession: false },
+  });
+
   log("Loading enabled tests…");
   const { data: tests, error } = await supabase
     .from("browser_tests")
