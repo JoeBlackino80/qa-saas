@@ -7,6 +7,10 @@ import { chromium } from "playwright";
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
+console.log(
+  `env: SUPABASE_URL ${SUPABASE_URL ? `set (${SUPABASE_URL.length} chars)` : "MISSING"}, ` +
+    `SUPABASE_SERVICE_ROLE_KEY ${SERVICE_KEY ? `set (${SERVICE_KEY.length} chars)` : "MISSING"}`,
+);
 if (!SUPABASE_URL || !SERVICE_KEY) {
   console.error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
   process.exit(1);
@@ -53,15 +57,17 @@ async function runStep(page, baseUrl, step) {
 }
 
 async function main() {
+  console.log("Loading enabled tests…");
   const { data: tests, error } = await supabase
     .from("browser_tests")
     .select("id, project_id, user_id, name, steps, projects(base_url)")
     .eq("enabled", true);
 
   if (error) {
-    console.error("Load tests failed:", error.message);
+    console.error("Load tests failed:", JSON.stringify(error));
     process.exit(1);
   }
+  console.log(`Loaded ${tests?.length ?? 0} test(s).`);
   if (!tests || tests.length === 0) {
     console.log("No enabled tests.");
     return;
