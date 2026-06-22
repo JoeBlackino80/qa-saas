@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import type { Project } from "@/lib/types";
 import { AddProjectModal } from "./add-project-modal";
+import { AlertSettings } from "./alert-settings";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -73,6 +74,10 @@ export default function DashboardPage() {
             </p>
           </div>
           <AddProjectModal onAdded={load} />
+        </div>
+
+        <div className="mb-6">
+          <AlertSettings />
         </div>
 
         {loading && <p className="text-sm text-muted">Načítavam…</p>}

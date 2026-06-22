@@ -32,7 +32,7 @@ function ProjectDetail() {
 
     const { data: proj } = await supabase
       .from("projects")
-      .select("id, name, base_url, created_at")
+      .select("id, name, base_url, created_at, public_status")
       .eq("id", id)
       .maybeSingle();
     setProject((proj as Project) ?? null);
@@ -65,6 +65,17 @@ function ProjectDetail() {
     } finally {
       setRunning(false);
     }
+  }
+
+  async function togglePublic() {
+    if (!project) return;
+    const next = !project.public_status;
+    const supabase = createClient();
+    const { error: upErr } = await supabase
+      .from("projects")
+      .update({ public_status: next })
+      .eq("id", project.id);
+    if (!upErr) setProject({ ...project, public_status: next });
   }
 
   if (loading) {
@@ -121,6 +132,38 @@ function ProjectDetail() {
           </div>
           {error && <p className="text-sm text-danger">{error}</p>}
         </div>
+      </div>
+
+      <div className="mb-8 flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-surface p-4">
+        <button
+          onClick={togglePublic}
+          className={`relative h-6 w-11 rounded-full transition-colors ${
+            project.public_status ? "bg-primary" : "bg-surface-2"
+          }`}
+          aria-label="Verejný status page"
+        >
+          <span
+            className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+              project.public_status ? "translate-x-5" : "translate-x-0.5"
+            }`}
+          />
+        </button>
+        <div className="flex-1">
+          <p className="text-sm font-medium">Verejný status page</p>
+          <p className="text-xs text-muted">
+            Zdieľateľná stránka so stavom webu pre klienta (bez prihlásenia).
+          </p>
+        </div>
+        {project.public_status && (
+          <a
+            href={`/status/?id=${project.id}`}
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-primary hover:bg-surface-2"
+          >
+            Otvoriť status page →
+          </a>
+        )}
       </div>
 
       {total > 0 && (

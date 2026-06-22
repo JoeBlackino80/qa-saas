@@ -8,6 +8,7 @@ export type Project = {
   name: string;
   base_url: string;
   created_at: string;
+  public_status?: boolean;
 };
 
 export type Check = {
