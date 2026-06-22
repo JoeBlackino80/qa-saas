@@ -4,8 +4,36 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { generateTest } from "@/lib/generate-test-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+
+const PRESETS: { label: string; name: string; steps: string }[] = [
+  { label: "— Vyber šablónu —", name: "", steps: "" },
+  {
+    label: "Smoke test (načítanie)",
+    name: "Smoke test",
+    steps: "goto /\nexpectSelector body",
+  },
+  {
+    label: "Kontaktný formulár",
+    name: "Kontaktný formulár",
+    steps:
+      "goto /kontakt\nfill input[name=email] test@example.com\nfill textarea Testovacia správa\nclick button[type=submit]\nexpectText Ďakujeme",
+  },
+  {
+    label: "Prihlásenie",
+    name: "Prihlásenie",
+    steps:
+      "goto /login\nfill input[name=email] test@example.com\nfill input[name=password] heslo123\nclick button[type=submit]\nexpectText Odhlásiť",
+  },
+  {
+    label: "Košík / objednávka",
+    name: "Objednávka",
+    steps:
+      "goto /\nclick text=Do košíka\nexpectSelector .cart\nclick text=Objednať\nexpectText Ďakujeme za objednávku",
+  },
+];
 
 type Step = { type: string; selector?: string; value?: string };
 type BrowserTest = {
@@ -83,6 +111,34 @@ function TestsView() {
   const [name, setName] = useState("");
   const [stepsText, setStepsText] = useState("");
   const [saving, setSaving] = useState(false);
+  const [aiDesc, setAiDesc] = useState("");
+  const [generating, setGenerating] = useState(false);
+  const [genError, setGenError] = useState<string | null>(null);
+
+  async function generate() {
+    if (!id || !aiDesc.trim()) return;
+    setGenerating(true);
+    setGenError(null);
+    try {
+      const r = await generateTest(id, aiDesc.trim());
+      if (r.name) setName(r.name);
+      setStepsText(
+        r.steps
+          .map((s) => {
+            if (s.type === "fill")
+              return `fill ${s.selector} ${s.value ?? ""}`.trim();
+            if (s.type === "click" || s.type === "expectSelector")
+              return `${s.type} ${s.selector ?? ""}`.trim();
+            return `${s.type} ${s.value ?? ""}`.trim();
+          })
+          .join("\n"),
+      );
+    } catch (e) {
+      setGenError(e instanceof Error ? e.message : "Generovanie zlyhalo.");
+    } finally {
+      setGenerating(false);
+    }
+  }
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -170,6 +226,52 @@ function TestsView() {
 
       <div className="mb-8 rounded-2xl border border-border bg-surface p-6">
         <p className="mb-3 font-medium">Nový test</p>
+
+        <div className="mb-5 rounded-xl border border-primary/30 bg-primary/5 p-4">
+          <label className="block text-sm font-medium">
+            🪄 Vygenerovať AI z popisu
+          </label>
+          <p className="mb-2 text-xs text-muted">
+            Napíš bežnou rečou, čo overiť — Claude si pozrie stránku a napíše
+            kroky.
+          </p>
+          <div className="flex gap-2">
+            <Input
+              id="aidesc"
+              name="aidesc"
+              placeholder="Over, že rezervačný formulár funguje a zobrazí poďakovanie"
+              value={aiDesc}
+              onChange={(e) => setAiDesc(e.target.value)}
+              className="flex-1"
+            />
+            <Button onClick={generate} disabled={generating || !aiDesc.trim()}>
+              {generating ? "Generujem…" : "Vygenerovať"}
+            </Button>
+          </div>
+          {genError && <p className="mt-2 text-sm text-danger">{genError}</p>}
+        </div>
+
+        <label className="mb-1 block text-sm font-medium text-muted">
+          Alebo vyber šablónu
+        </label>
+        <select
+          onChange={(e) => {
+            const p = PRESETS[Number(e.target.value)];
+            if (p && p.steps) {
+              setName(p.name);
+              setStepsText(p.steps);
+            }
+          }}
+          className="mb-5 w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
+          defaultValue="0"
+        >
+          {PRESETS.map((p, i) => (
+            <option key={i} value={i}>
+              {p.label}
+            </option>
+          ))}
+        </select>
+
         <Input
           id="tname"
           label="Názov"
