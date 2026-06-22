@@ -1,41 +1,67 @@
 "use client";
 
-import { useActionState } from "react";
-import { useFormStatus } from "react-dom";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-type AuthState = { error?: string; success?: string } | undefined;
+type AuthFormProps = { mode: "login" | "signup" };
 
-type AuthAction = (
-  prevState: AuthState,
-  formData: FormData,
-) => Promise<AuthState>;
-
-type AuthFormProps = {
-  mode: "login" | "signup";
-  action: AuthAction;
-  redirectTo?: string;
-};
-
-function SubmitButton({ mode }: { mode: "login" | "signup" }) {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" disabled={pending} className="w-full">
-      {pending
-        ? "Moment…"
-        : mode === "login"
-          ? "Prihlásiť sa"
-          : "Vytvoriť účet"}
-    </Button>
-  );
-}
-
-export function AuthForm({ mode, action, redirectTo }: AuthFormProps) {
-  const [state, formAction] = useActionState(action, undefined);
-
+export function AuthForm({ mode }: AuthFormProps) {
+  const router = useRouter();
   const isLogin = mode === "login";
+
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+    setSuccess(null);
+    setPending(true);
+
+    const form = new FormData(e.currentTarget);
+    const email = String(form.get("email") ?? "");
+    const password = String(form.get("password") ?? "");
+    const supabase = createClient();
+
+    try {
+      if (isLogin) {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (error) {
+          setError(error.message);
+          return;
+        }
+        router.replace("/dashboard");
+        router.refresh();
+      } else {
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+        });
+        if (error) {
+          setError(error.message);
+          return;
+        }
+        if (!data.session) {
+          setSuccess(
+            "Účet vytvorený. Skontrolujte si email a potvrďte registráciu, potom sa prihláste.",
+          );
+          return;
+        }
+        router.replace("/dashboard");
+        router.refresh();
+      }
+    } finally {
+      setPending(false);
+    }
+  }
 
   return (
     <div className="w-full max-w-sm">
@@ -50,10 +76,7 @@ export function AuthForm({ mode, action, redirectTo }: AuthFormProps) {
         </p>
       </div>
 
-      <form action={formAction} className="flex flex-col gap-4">
-        {redirectTo && (
-          <input type="hidden" name="redirect" value={redirectTo} />
-        )}
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <Input
           id="email"
           name="email"
@@ -74,19 +97,24 @@ export function AuthForm({ mode, action, redirectTo }: AuthFormProps) {
           required
         />
 
-        {state?.error && (
+        {error && (
           <p className="rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">
-            {state.error}
+            {error}
           </p>
         )}
-
-        {state?.success && (
+        {success && (
           <p className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-400">
-            {state.success}
+            {success}
           </p>
         )}
 
-        <SubmitButton mode={mode} />
+        <Button type="submit" disabled={pending} className="w-full">
+          {pending
+            ? "Moment…"
+            : isLogin
+              ? "Prihlásiť sa"
+              : "Vytvoriť účet"}
+        </Button>
       </form>
 
       <p className="mt-6 text-center text-sm text-muted">

@@ -1,11 +1,22 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+"use client";
 
-export default async function Home() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
-  redirect(user ? "/dashboard" : "/login");
+export default function Home() {
+  const router = useRouter();
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getSession().then(({ data }) => {
+      router.replace(data.session ? "/dashboard" : "/login");
+    });
+  }, [router]);
+
+  return (
+    <main className="flex flex-1 items-center justify-center">
+      <p className="text-sm text-muted">Načítavam…</p>
+    </main>
+  );
 }

@@ -1,30 +1,47 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
+import type { Project } from "@/lib/types";
 import { AddProjectModal } from "./add-project-modal";
 
-type Project = {
-  id: string;
-  name: string;
-  base_url: string;
-  created_at: string;
-};
+export default function DashboardPage() {
+  const router = useRouter();
+  const [email, setEmail] = useState<string | null>(null);
+  const [projects, setProjects] = useState<Project[] | null>(null);
+  const [loading, setLoading] = useState(true);
 
-export default async function DashboardPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const load = useCallback(async () => {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      router.replace("/login");
+      return;
+    }
+    setEmail(user.email ?? null);
 
-  if (!user) {
-    redirect("/login");
+    const { data } = await supabase
+      .from("projects")
+      .select("id, name, base_url, created_at")
+      .order("created_at", { ascending: false });
+    setProjects((data ?? []) as Project[]);
+    setLoading(false);
+  }, [router]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  async function signOut() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.replace("/login");
   }
-
-  const { data: projects, error } = await supabase
-    .from("projects")
-    .select("id, name, base_url, created_at")
-    .order("created_at", { ascending: false });
 
   return (
     <div className="flex flex-1 flex-col">
@@ -37,14 +54,12 @@ export default async function DashboardPage() {
             <span className="font-semibold">QA Agent</span>
           </div>
           <div className="flex items-center gap-4">
-            <span className="hidden text-sm text-muted sm:block">
-              {user.email}
-            </span>
-            <form action="/auth/signout" method="post">
-              <Button variant="ghost" type="submit">
-                Odhlásiť
-              </Button>
-            </form>
+            {email && (
+              <span className="hidden text-sm text-muted sm:block">{email}</span>
+            )}
+            <Button variant="ghost" onClick={signOut}>
+              Odhlásiť
+            </Button>
           </div>
         </div>
       </header>
@@ -57,16 +72,12 @@ export default async function DashboardPage() {
               Weby, ktoré monitorujete a testujete.
             </p>
           </div>
-          <AddProjectModal />
+          <AddProjectModal onAdded={load} />
         </div>
 
-        {error && (
-          <p className="rounded-lg border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">
-            Nepodarilo sa načítať projekty: {error.message}
-          </p>
-        )}
+        {loading && <p className="text-sm text-muted">Načítavam…</p>}
 
-        {!error && (!projects || projects.length === 0) && (
+        {!loading && projects && projects.length === 0 && (
           <div className="rounded-2xl border border-dashed border-border bg-surface/50 px-6 py-16 text-center">
             <p className="text-foreground">Zatiaľ žiadne projekty.</p>
             <p className="mt-1 text-sm text-muted">
@@ -75,15 +86,15 @@ export default async function DashboardPage() {
           </div>
         )}
 
-        {!error && projects && projects.length > 0 && (
+        {!loading && projects && projects.length > 0 && (
           <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {(projects as Project[]).map((p) => (
+            {projects.map((p) => (
               <li
                 key={p.id}
                 className="rounded-2xl border border-border bg-surface p-5 transition-colors hover:border-primary/50"
               >
                 <Link
-                  href={`/dashboard/${p.id}`}
+                  href={`/project?id=${p.id}`}
                   className="font-medium hover:text-primary"
                 >
                   {p.name}
@@ -106,10 +117,10 @@ export default async function DashboardPage() {
                     })}
                   </p>
                   <Link
-                    href={`/dashboard/${p.id}`}
+                    href={`/project?id=${p.id}`}
                     className="text-xs font-medium text-primary hover:underline"
                   >
-                    Detail & kontroly →
+                    Detail &amp; kontroly →
                   </Link>
                 </div>
               </li>

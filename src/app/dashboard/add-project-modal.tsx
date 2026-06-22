@@ -1,34 +1,60 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
-import { useFormStatus } from "react-dom";
+import { useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { addProject } from "./actions";
 
-function SaveButton() {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" disabled={pending}>
-      {pending ? "Ukladám…" : "Uložiť"}
-    </Button>
-  );
-}
-
-export function AddProjectModal() {
+export function AddProjectModal({ onAdded }: { onAdded: () => void }) {
   const [open, setOpen] = useState(false);
-  const [state, formAction] = useActionState(addProject, undefined);
-  const formRef = useRef<HTMLFormElement>(null);
-  const wasPending = useRef(false);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Close the modal once a submit completes without an error.
-  useEffect(() => {
-    if (state === undefined && wasPending.current) {
-      setOpen(false);
-      formRef.current?.reset();
-      wasPending.current = false;
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+
+    const form = new FormData(e.currentTarget);
+    const name = String(form.get("name") ?? "").trim();
+    const baseUrl = String(form.get("base_url") ?? "").trim();
+
+    if (!name || !baseUrl) {
+      setError("Vyplňte názov aj URL.");
+      return;
     }
-  }, [state]);
+    try {
+      new URL(baseUrl);
+    } catch {
+      setError("Zadajte platnú URL (vrátane https://).");
+      return;
+    }
+
+    setPending(true);
+    try {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        setError("Nie ste prihlásený.");
+        return;
+      }
+
+      const { error: insErr } = await supabase
+        .from("projects")
+        .insert({ name, base_url: baseUrl, user_id: user.id });
+
+      if (insErr) {
+        setError(insErr.message);
+        return;
+      }
+
+      setOpen(false);
+      onAdded();
+    } finally {
+      setPending(false);
+    }
+  }
 
   return (
     <>
@@ -54,14 +80,7 @@ export function AddProjectModal() {
               </button>
             </div>
 
-            <form
-              ref={formRef}
-              action={(fd) => {
-                wasPending.current = true;
-                formAction(fd);
-              }}
-              className="flex flex-col gap-4"
-            >
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               <Input
                 id="name"
                 name="name"
@@ -78,9 +97,9 @@ export function AddProjectModal() {
                 required
               />
 
-              {state?.error && (
+              {error && (
                 <p className="rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">
-                  {state.error}
+                  {error}
                 </p>
               )}
 
@@ -92,7 +111,9 @@ export function AddProjectModal() {
                 >
                   Zrušiť
                 </Button>
-                <SaveButton />
+                <Button type="submit" disabled={pending}>
+                  {pending ? "Ukladám…" : "Uložiť"}
+                </Button>
               </div>
             </form>
           </div>
