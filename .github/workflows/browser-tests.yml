@@ -8,15 +8,14 @@ on:
 jobs:
   run:
     runs-on: ubuntu-latest
+    # Official Playwright image: browsers + system deps preinstalled (avoids
+    # flaky "playwright install --with-deps" failures on the bare runner).
+    container:
+      image: mcr.microsoft.com/playwright:v1.48.0-jammy
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
       - name: Install deps
-        run: npm install @supabase/supabase-js playwright
-      - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+        run: npm install @supabase/supabase-js playwright@1.48.0
       - name: Run browser tests
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
