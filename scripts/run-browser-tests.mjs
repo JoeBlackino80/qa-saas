@@ -1,18 +1,32 @@
 // Runs all enabled browser tests with Playwright and writes results to Supabase.
 // Executed by GitHub Actions (see .github/workflows/browser-tests.yml).
 // Needs env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY.
+import { appendFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
 import { chromium } from "playwright";
+
+const SUMMARY = process.env.GITHUB_STEP_SUMMARY;
+function log(msg) {
+  console.log(msg);
+  if (SUMMARY) {
+    try {
+      appendFileSync(SUMMARY, msg + "\n");
+    } catch {
+      // ignore
+    }
+  }
+}
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-console.log(
+log(
   `env: SUPABASE_URL ${SUPABASE_URL ? `set (${SUPABASE_URL.length} chars)` : "MISSING"}, ` +
     `SUPABASE_SERVICE_ROLE_KEY ${SERVICE_KEY ? `set (${SERVICE_KEY.length} chars)` : "MISSING"}`,
 );
+
 if (!SUPABASE_URL || !SERVICE_KEY) {
-  console.error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+  log("CHYBA: chýba SUPABASE_URL alebo SUPABASE_SERVICE_ROLE_KEY (GitHub secrets).");
   process.exit(1);
 }
 
@@ -26,7 +40,6 @@ function resolveUrl(baseUrl, target) {
   return new URL(target, baseUrl).toString();
 }
 
-// Executes one step. Throws on failure.
 async function runStep(page, baseUrl, step) {
   const timeout = 15000;
   switch (step.type) {
@@ -43,7 +56,10 @@ async function runStep(page, baseUrl, step) {
       await page.fill(step.selector, step.value ?? "", { timeout });
       break;
     case "expectText":
-      await page.getByText(step.value, { exact: false }).first().waitFor({ timeout });
+      await page
+        .getByText(step.value, { exact: false })
+        .first()
+        .waitFor({ timeout });
       break;
     case "expectSelector":
       await page.locator(step.selector).first().waitFor({ timeout });
@@ -57,19 +73,20 @@ async function runStep(page, baseUrl, step) {
 }
 
 async function main() {
-  console.log("Loading enabled tests…");
+  log("Loading enabled tests…");
   const { data: tests, error } = await supabase
     .from("browser_tests")
     .select("id, project_id, user_id, name, steps, projects(base_url)")
     .eq("enabled", true);
 
   if (error) {
-    console.error("Load tests failed:", JSON.stringify(error));
+    log("CHYBA pri načítaní testov: " + JSON.stringify(error));
     process.exit(1);
   }
-  console.log(`Loaded ${tests?.length ?? 0} test(s).`);
+
+  log(`Načítaných ${tests?.length ?? 0} testov.`);
   if (!tests || tests.length === 0) {
-    console.log("No enabled tests.");
+    log("Žiadne aktívne testy — infraštruktúra OK, niet čo spustiť.");
     return;
   }
 
@@ -110,7 +127,7 @@ async function main() {
         failed_step: failedStep,
         duration_ms: duration,
       });
-      console.log(
+      log(
         `${ok ? "PASS" : "FAIL"}  ${t.name}  (${duration}ms)${errMsg ? " — " + errMsg : ""}`,
       );
     }
@@ -120,6 +137,6 @@ async function main() {
 }
 
 main().catch((e) => {
-  console.error(e);
+  log("FATAL: " + (e instanceof Error ? e.stack : String(e)));
   process.exit(1);
 });
