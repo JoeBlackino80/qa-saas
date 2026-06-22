@@ -20,7 +20,7 @@ export function AlertSettings() {
         secret_name: "slack_webhook_url",
         secret_value: value.trim(),
       });
-      setMsg(error ? `Chyba: ${error.message}` : "Uložené ✓ Alerty sú zapnuté.");
+      setMsg(error ? `Chyba: ${error.message}` : "Uložené. Alerty sú zapnuté.");
       if (!error) setValue("");
     } finally {
       setPending(false);
@@ -33,7 +33,7 @@ export function AlertSettings() {
         onClick={() => setOpen(true)}
         className="text-sm text-muted hover:text-foreground"
       >
-        🔔 Upozornenia
+        Upozornenia
       </button>
     );
   }

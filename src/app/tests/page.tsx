@@ -229,7 +229,7 @@ function TestsView() {
 
         <div className="mb-5 rounded-xl border border-primary/30 bg-primary/5 p-4">
           <label className="block text-sm font-medium">
-            🪄 Vygenerovať AI z popisu
+            Vygenerovať AI z popisu
           </label>
           <p className="mb-2 text-xs text-muted">
             Napíš bežnou rečou, čo overiť — Claude si pozrie stránku a napíše

@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { fetchReport, type WeeklyReport } from "@/lib/report-client";
 import { Button } from "@/components/ui/button";
+import { Markdown } from "@/components/markdown";
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
@@ -77,7 +78,7 @@ function ReportView() {
           </Button>
         </div>
         <Button variant="ghost" onClick={() => window.print()}>
-          🖨 Stiahnuť PDF / Tlačiť
+          Stiahnuť PDF / Tlačiť
         </Button>
       </div>
 
@@ -117,9 +118,7 @@ function ReportView() {
 
         {report.narrative && (
           <div className="rounded-xl border border-border bg-surface-2 p-6 print:border-zinc-300 print:bg-white">
-            <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90 print:text-black">
-              {report.narrative}
-            </p>
+            <Markdown text={report.narrative} className="print:text-black" />
           </div>
         )}
 

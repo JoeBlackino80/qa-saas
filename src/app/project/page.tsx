@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { triggerCheck } from "@/lib/run-check-client";
 import { Button } from "@/components/ui/button";
+import { Markdown } from "@/components/markdown";
 import type { Check, Project } from "@/lib/types";
 
 function ProjectDetail() {
@@ -124,10 +125,10 @@ function ProjectDetail() {
         <div className="flex flex-col items-end gap-2">
           <div className="flex flex-wrap justify-end gap-2">
             <Link href={`/tests?id=${project.id}`}>
-              <Button variant="ghost">🧪 Testy</Button>
+              <Button variant="ghost">Testy</Button>
             </Link>
             <Link href={`/report?id=${project.id}`}>
-              <Button variant="ghost">📄 Klientsky report</Button>
+              <Button variant="ghost">Klientsky report</Button>
             </Link>
             <Button onClick={runCheck} disabled={running}>
               {running ? "Kontrolujem…" : "Spustiť kontrolu"}
@@ -278,12 +279,12 @@ function ProjectDetail() {
                             : "bg-surface-2 text-foreground/80"
                       }`}
                     >
-                      <span>
+                      <span className="shrink-0 text-xs font-semibold uppercase tracking-wide opacity-70">
                         {ch.severity === "critical"
-                          ? "🔴"
+                          ? "Kritické"
                           : ch.severity === "warning"
-                            ? "⚠️"
-                            : "ℹ️"}
+                            ? "Varovanie"
+                            : "Info"}
                       </span>
                       <span>{ch.message}</span>
                     </li>
@@ -296,9 +297,7 @@ function ProjectDetail() {
                   <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted">
                     AI report
                   </p>
-                  <p className="whitespace-pre-wrap text-sm text-foreground/90">
-                    {c.ai_report}
-                  </p>
+                  <Markdown text={c.ai_report} />
                 </div>
               )}
             </li>
