@@ -110,7 +110,9 @@ async function main() {
       let errMsg = null;
       let failedStep = null;
 
-      const context = await browser.newContext();
+      // Ignore TLS cert errors — functional tests focus on behaviour;
+      // certificate validity is covered separately by the availability monitor.
+      const context = await browser.newContext({ ignoreHTTPSErrors: true });
       const page = await context.newPage();
       try {
         for (let i = 0; i < steps.length; i++) {
