@@ -122,7 +122,10 @@ function ProjectDetail() {
           </a>
         </div>
         <div className="flex flex-col items-end gap-2">
-          <div className="flex gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
+            <Link href={`/tests?id=${project.id}`}>
+              <Button variant="ghost">🧪 Testy</Button>
+            </Link>
             <Link href={`/report?id=${project.id}`}>
               <Button variant="ghost">📄 Klientsky report</Button>
             </Link>
