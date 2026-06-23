@@ -1,0 +1,25 @@
+name: Quality audit
+
+on:
+  schedule:
+    - cron: "0 3 * * *" # daily at 03:00 UTC
+  workflow_dispatch: {}
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22 # supabase-js realtime needs native WebSocket
+      - name: Install deps
+        run: npm install @supabase/supabase-js playwright lighthouse
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Run quality audits
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GOOGLE_SAFE_BROWSING_KEY: ${{ secrets.GOOGLE_SAFE_BROWSING_KEY }}
+        run: node scripts/run-quality-audits.mjs

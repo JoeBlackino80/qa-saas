@@ -11,7 +11,7 @@ import {
 } from "@/lib/security-client";
 import { Button } from "@/components/ui/button";
 import { Markdown } from "@/components/markdown";
-import type { Check, Project } from "@/lib/types";
+import type { Check, Project, QualityAudit } from "@/lib/types";
 
 function ProjectDetail() {
   const router = useRouter();
@@ -26,6 +26,7 @@ function ProjectDetail() {
   const [audit, setAudit] = useState<SecurityAudit | null>(null);
   const [auditing, setAuditing] = useState(false);
   const [auditError, setAuditError] = useState<string | null>(null);
+  const [quality, setQuality] = useState<QualityAudit | null>(null);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -63,6 +64,17 @@ function ProjectDetail() {
       .limit(1)
       .maybeSingle();
     setAudit((aud as SecurityAudit) ?? null);
+
+    const { data: q } = await supabase
+      .from("quality_audits")
+      .select(
+        "performance, accessibility, best_practices, seo, broken_count, broken_links, blacklisted, blacklist_detail, created_at",
+      )
+      .eq("project_id", id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    setQuality((q as QualityAudit) ?? null);
 
     setLoading(false);
   }, [id, router]);
@@ -359,6 +371,96 @@ function ProjectDetail() {
                 </p>
                 <Markdown text={audit.ai_summary} />
               </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="mb-8 animate-in rounded-2xl border border-border bg-surface p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <p className="text-sm font-medium">Výkon &amp; stabilita</p>
+          <p className="text-xs text-muted">
+            {quality
+              ? `aktualizované ${new Date(quality.created_at).toLocaleDateString("sk-SK")}`
+              : "beží denne (GitHub Actions)"}
+          </p>
+        </div>
+        {!quality ? (
+          <p className="text-sm text-muted">
+            Zatiaľ bez dát — spustí sa automaticky (denne), alebo manuálne v
+            GitHub Actions → „Quality audit".
+          </p>
+        ) : (
+          <div className="flex flex-col gap-5">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+              {(
+                [
+                  ["Výkon", quality.performance],
+                  ["Prístupnosť", quality.accessibility],
+                  ["Best practices", quality.best_practices],
+                  ["SEO", quality.seo],
+                ] as [string, number | null][]
+              ).map(([label, val]) => (
+                <div
+                  key={label}
+                  className="rounded-xl border border-border bg-surface-2 p-4 text-center"
+                >
+                  <p
+                    className={`tabular text-2xl font-bold ${
+                      val === null
+                        ? "text-muted"
+                        : val >= 90
+                          ? "text-ok"
+                          : val >= 50
+                            ? "text-warn"
+                            : "text-danger"
+                    }`}
+                  >
+                    {val ?? "—"}
+                  </p>
+                  <p className="mt-1 text-xs text-muted">{label}</p>
+                </div>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-3 text-sm">
+              <span
+                className={`rounded-lg px-3 py-1.5 ${
+                  (quality.broken_count ?? 0) > 0
+                    ? "bg-danger/15 text-danger"
+                    : "bg-ok/15 text-ok"
+                }`}
+              >
+                Rozbité odkazy: {quality.broken_count ?? 0}
+              </span>
+              <span
+                className={`rounded-lg px-3 py-1.5 ${
+                  quality.blacklisted === true
+                    ? "bg-danger/15 text-danger"
+                    : quality.blacklisted === false
+                      ? "bg-ok/15 text-ok"
+                      : "bg-surface-2 text-muted"
+                }`}
+                title={quality.blacklist_detail ?? ""}
+              >
+                Blacklist:{" "}
+                {quality.blacklisted === true
+                  ? "na zozname"
+                  : quality.blacklisted === false
+                    ? "čistý"
+                    : "nekontrolované"}
+              </span>
+            </div>
+            {quality.broken_links && quality.broken_links.length > 0 && (
+              <ul className="flex flex-col gap-1 text-sm">
+                {quality.broken_links.slice(0, 8).map((l, i) => (
+                  <li key={i} className="flex gap-2 text-muted">
+                    <span className="tabular shrink-0 text-danger">
+                      {l.status || "ERR"}
+                    </span>
+                    <span className="truncate">{l.url}</span>
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
         )}

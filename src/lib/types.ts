@@ -11,6 +11,18 @@ export type Project = {
   public_status?: boolean;
 };
 
+export type QualityAudit = {
+  performance: number | null;
+  accessibility: number | null;
+  best_practices: number | null;
+  seo: number | null;
+  broken_count: number | null;
+  broken_links: { url: string; status: number }[] | null;
+  blacklisted: boolean | null;
+  blacklist_detail: string | null;
+  created_at: string;
+};
+
 export type Check = {
   id: string;
   status_code: number | null;
