@@ -43,3 +43,20 @@ export async function runSecurityAudit(projectId: string): Promise<SecurityAudit
 export async function runQualityAudit(projectId: string) {
   return await callFn(QUALITY_URL, projectId);
 }
+
+const TRIGGER_URL = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/trigger-tests`;
+
+export async function triggerTests(): Promise<void> {
+  const supabase = createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session) throw new Error("Nie ste prihlásený.");
+  const res = await fetch(TRIGGER_URL, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${session.access_token}` },
+  });
+  const data = await res.json();
+  if (!res.ok || !data.ok)
+    throw new Error(data?.error ?? `Spustenie zlyhalo (HTTP ${res.status})`);
+}

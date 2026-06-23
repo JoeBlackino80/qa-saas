@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { generateTest } from "@/lib/generate-test-client";
+import { triggerTests } from "@/lib/security-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -114,6 +115,23 @@ function TestsView() {
   const [aiDesc, setAiDesc] = useState("");
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
+  const [triggering, setTriggering] = useState(false);
+  const [triggerMsg, setTriggerMsg] = useState<string | null>(null);
+
+  async function triggerAll() {
+    setTriggering(true);
+    setTriggerMsg(null);
+    try {
+      await triggerTests();
+      setTriggerMsg(
+        "Testy spustené. Výsledky sa objavia o ~1 minútu — potom obnov stránku.",
+      );
+    } catch (e) {
+      setTriggerMsg(e instanceof Error ? e.message : "Spustenie zlyhalo.");
+    } finally {
+      setTriggering(false);
+    }
+  }
 
   async function generate() {
     if (!id || !aiDesc.trim()) return;
@@ -215,14 +233,22 @@ function TestsView() {
 
   return (
     <>
-      <h1 className="mb-1 text-2xl font-semibold tracking-tight">
-        Prehliadačové testy
-      </h1>
-      <p className="mb-8 text-sm text-muted">
-        Reálne preklikanie webu (Playwright). Testy bežia automaticky každých 6
-        hodín cez GitHub Actions a po pridaní sa dajú spustiť aj ručne v záložke
-        Actions na GitHube.
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold tracking-tight">
+          Prehliadačové testy
+        </h1>
+        <Button onClick={triggerAll} disabled={triggering}>
+          {triggering ? "Spúšťam…" : "Spustiť testy"}
+        </Button>
+      </div>
+      <p className="mb-2 text-sm text-muted">
+        Reálne preklikanie webu (Playwright). Bežia automaticky každých 6 hodín,
+        alebo ich spustíš tlačidlom. Výsledky sa objavia o ~1 minútu (obnov
+        stránku).
       </p>
+      {triggerMsg && (
+        <p className="mb-6 text-sm text-foreground/80">{triggerMsg}</p>
+      )}
 
       <div className="mb-8 rounded-2xl border border-border bg-surface p-6">
         <p className="mb-3 font-medium">Nový test</p>
