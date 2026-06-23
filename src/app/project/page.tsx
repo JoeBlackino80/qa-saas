@@ -5,6 +5,10 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { triggerCheck } from "@/lib/run-check-client";
+import {
+  runSecurityAudit,
+  type SecurityAudit,
+} from "@/lib/security-client";
 import { Button } from "@/components/ui/button";
 import { Markdown } from "@/components/markdown";
 import type { Check, Project } from "@/lib/types";
@@ -19,6 +23,9 @@ function ProjectDetail() {
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [audit, setAudit] = useState<SecurityAudit | null>(null);
+  const [auditing, setAuditing] = useState(false);
+  const [auditError, setAuditError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -47,6 +54,16 @@ function ProjectDetail() {
       .order("created_at", { ascending: false })
       .limit(50);
     setRows((checks ?? []) as Check[]);
+
+    const { data: aud } = await supabase
+      .from("security_audits")
+      .select("grade, score, findings, ai_summary, created_at")
+      .eq("project_id", id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    setAudit((aud as SecurityAudit) ?? null);
+
     setLoading(false);
   }, [id, router]);
 
@@ -65,6 +82,19 @@ function ProjectDetail() {
       setError(e instanceof Error ? e.message : "Kontrola zlyhala.");
     } finally {
       setRunning(false);
+    }
+  }
+
+  async function runAudit() {
+    if (!id) return;
+    setAuditing(true);
+    setAuditError(null);
+    try {
+      setAudit(await runSecurityAudit(id));
+    } catch (e) {
+      setAuditError(e instanceof Error ? e.message : "Audit zlyhal.");
+    } finally {
+      setAuditing(false);
     }
   }
 
@@ -249,6 +279,90 @@ function ProjectDetail() {
           </div>
         </div>
       )}
+
+      <div className="mb-8 animate-in rounded-2xl border border-border bg-surface p-5">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-medium">Bezpečnostný audit</p>
+            <p className="text-xs text-muted">
+              Pasívna analýza (hlavičky, TLS, cookies, mixed content). Spúšťaj
+              len na weboch, ktoré vlastníš alebo máš povolenie.
+            </p>
+          </div>
+          <Button variant="ghost" onClick={runAudit} disabled={auditing}>
+            {auditing ? "Analyzujem…" : "Spustiť audit"}
+          </Button>
+        </div>
+        {auditError && <p className="mb-3 text-sm text-danger">{auditError}</p>}
+
+        {!audit && !auditError && (
+          <p className="text-sm text-muted">Audit ešte nebol spustený.</p>
+        )}
+
+        {audit && (
+          <div className="flex flex-col gap-5">
+            <div className="flex items-center gap-4">
+              <span
+                className={`grid h-14 w-14 place-items-center rounded-xl text-2xl font-bold ${
+                  ["A", "B"].includes(audit.grade)
+                    ? "bg-ok/15 text-ok"
+                    : audit.grade === "C"
+                      ? "bg-warn/15 text-warn"
+                      : "bg-danger/15 text-danger"
+                }`}
+              >
+                {audit.grade}
+              </span>
+              <div>
+                <p className="tabular text-lg font-semibold">
+                  {audit.score}/100
+                </p>
+                <p className="text-xs text-muted">bezpečnostné skóre</p>
+              </div>
+            </div>
+
+            <ul className="flex flex-col gap-1.5">
+              {[...audit.findings]
+                .sort((a, b) => {
+                  const order = { high: 0, medium: 1, low: 2, ok: 3 };
+                  return order[a.severity] - order[b.severity];
+                })
+                .map((f, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm">
+                    <span
+                      className={`mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ${
+                        f.severity === "high"
+                          ? "bg-danger/15 text-danger"
+                          : f.severity === "medium"
+                            ? "bg-warn/15 text-warn"
+                            : f.severity === "low"
+                              ? "bg-surface-2 text-muted"
+                              : "bg-ok/15 text-ok"
+                      }`}
+                    >
+                      {f.severity === "ok" ? "OK" : f.severity}
+                    </span>
+                    <span className="text-foreground/80">
+                      <span className="font-medium text-foreground">
+                        {f.title}
+                      </span>{" "}
+                      — {f.detail}
+                    </span>
+                  </li>
+                ))}
+            </ul>
+
+            {audit.ai_summary && (
+              <div className="rounded-lg border border-border bg-surface-2 p-4">
+                <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted">
+                  AI zhrnutie
+                </p>
+                <Markdown text={audit.ai_summary} />
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       <h2 className="mb-4 text-sm font-medium uppercase tracking-wide text-muted">
         História kontrol
