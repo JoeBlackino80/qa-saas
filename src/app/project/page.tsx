@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { triggerCheck } from "@/lib/run-check-client";
 import {
   runSecurityAudit,
+  runQualityAudit,
   type SecurityAudit,
 } from "@/lib/security-client";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,8 @@ function ProjectDetail() {
   const [auditing, setAuditing] = useState(false);
   const [auditError, setAuditError] = useState<string | null>(null);
   const [quality, setQuality] = useState<QualityAudit | null>(null);
+  const [qRunning, setQRunning] = useState(false);
+  const [qError, setQError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -94,6 +97,25 @@ function ProjectDetail() {
       setError(e instanceof Error ? e.message : "Kontrola zlyhala.");
     } finally {
       setRunning(false);
+    }
+  }
+
+  async function runQuality() {
+    if (!id) return;
+    setQRunning(true);
+    setQError(null);
+    try {
+      const q = await runQualityAudit(id);
+      setQuality(q as QualityAudit);
+      if (q?.psi_error) {
+        setQError(
+          `Lighthouse skóre sa nenačítalo (${q.psi_error}). Pre skóre treba PageSpeed API kľúč — rozbité odkazy/blacklist fungujú aj bez neho.`,
+        );
+      }
+    } catch (e) {
+      setQError(e instanceof Error ? e.message : "Audit zlyhal.");
+    } finally {
+      setQRunning(false);
     }
   }
 
@@ -377,18 +399,23 @@ function ProjectDetail() {
       </div>
 
       <div className="mb-8 animate-in rounded-2xl border border-border bg-surface p-5">
-        <div className="mb-4 flex items-center justify-between">
-          <p className="text-sm font-medium">Výkon &amp; stabilita</p>
-          <p className="text-xs text-muted">
-            {quality
-              ? `aktualizované ${new Date(quality.created_at).toLocaleDateString("sk-SK")}`
-              : "beží denne (GitHub Actions)"}
-          </p>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-medium">Výkon &amp; stabilita</p>
+            <p className="text-xs text-muted">
+              {quality
+                ? `aktualizované ${new Date(quality.created_at).toLocaleDateString("sk-SK")}`
+                : "Lighthouse skóre, rozbité odkazy, blacklist."}
+            </p>
+          </div>
+          <Button variant="ghost" onClick={runQuality} disabled={qRunning}>
+            {qRunning ? "Analyzujem…" : "Spustiť audit výkonu"}
+          </Button>
         </div>
+        {qError && <p className="mb-3 text-sm text-warn">{qError}</p>}
         {!quality ? (
           <p className="text-sm text-muted">
-            Zatiaľ bez dát — spustí sa automaticky (denne), alebo manuálne v
-            GitHub Actions → „Quality audit".
+            Audit ešte nebol spustený. Klikni na „Spustiť audit výkonu".
           </p>
         ) : (
           <div className="flex flex-col gap-5">

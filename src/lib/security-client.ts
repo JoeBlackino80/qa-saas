@@ -15,14 +15,15 @@ export type SecurityAudit = {
   created_at?: string;
 };
 
-export async function runSecurityAudit(projectId: string): Promise<SecurityAudit> {
+const QUALITY_URL = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/quality-audit`;
+
+async function callFn(url: string, projectId: string) {
   const supabase = createClient();
   const {
     data: { session },
   } = await supabase.auth.getSession();
   if (!session) throw new Error("Nie ste prihlásený.");
-
-  const res = await fetch(URL, {
+  const res = await fetch(url, {
     method: "POST",
     headers: {
       "content-type": "application/json",
@@ -31,6 +32,14 @@ export async function runSecurityAudit(projectId: string): Promise<SecurityAudit
     body: JSON.stringify({ projectId }),
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data?.error ?? `Audit zlyhal (HTTP ${res.status})`);
-  return data as SecurityAudit;
+  if (!res.ok) throw new Error(data?.error ?? `Zlyhalo (HTTP ${res.status})`);
+  return data;
+}
+
+export async function runSecurityAudit(projectId: string): Promise<SecurityAudit> {
+  return (await callFn(URL, projectId)) as SecurityAudit;
+}
+
+export async function runQualityAudit(projectId: string) {
+  return await callFn(QUALITY_URL, projectId);
 }
