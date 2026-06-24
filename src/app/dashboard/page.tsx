@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import type { Project } from "@/lib/types";
 import { AddProjectModal } from "./add-project-modal";
 import { AlertSettings } from "./alert-settings";
+import { PushSettings } from "./push-settings";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -97,8 +98,9 @@ export default function DashboardPage() {
           <AddProjectModal onAdded={load} />
         </div>
 
-        <div className="mb-6">
+        <div className="mb-6 flex flex-wrap gap-4">
           <AlertSettings />
+          <PushSettings />
         </div>
 
         {loading && <p className="text-sm text-muted">Načítavam…</p>}

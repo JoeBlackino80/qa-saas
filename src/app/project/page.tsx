@@ -12,6 +12,7 @@ import {
 } from "@/lib/security-client";
 import { Button } from "@/components/ui/button";
 import { Markdown } from "@/components/markdown";
+import { toast } from "@/components/toaster";
 import type { Check, Project, QualityAudit } from "@/lib/types";
 
 function ProjectDetail() {
@@ -93,8 +94,11 @@ function ProjectDetail() {
     try {
       await triggerCheck(id, true);
       await load();
+      toast("Kontrola dokončená.", "success");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Kontrola zlyhala.");
+      const m = e instanceof Error ? e.message : "Kontrola zlyhala.";
+      setError(m);
+      toast(m, "error");
     } finally {
       setRunning(false);
     }
@@ -107,6 +111,7 @@ function ProjectDetail() {
     try {
       const q = await runQualityAudit(id);
       setQuality(q as QualityAudit);
+      toast("Audit výkonu dokončený.", "success");
       if (q?.psi_error) {
         setQError(
           `Lighthouse skóre sa nenačítalo (${q.psi_error}). Pre skóre treba PageSpeed API kľúč — rozbité odkazy/blacklist fungujú aj bez neho.`,
@@ -125,8 +130,11 @@ function ProjectDetail() {
     setAuditError(null);
     try {
       setAudit(await runSecurityAudit(id));
+      toast("Bezpečnostný audit dokončený.", "success");
     } catch (e) {
-      setAuditError(e instanceof Error ? e.message : "Audit zlyhal.");
+      const m = e instanceof Error ? e.message : "Audit zlyhal.";
+      setAuditError(m);
+      toast(m, "error");
     } finally {
       setAuditing(false);
     }

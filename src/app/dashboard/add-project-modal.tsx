@@ -4,6 +4,7 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { toast } from "@/components/toaster";
 
 export function AddProjectModal({ onAdded }: { onAdded: () => void }) {
   const [open, setOpen] = useState(false);
@@ -51,6 +52,7 @@ export function AddProjectModal({ onAdded }: { onAdded: () => void }) {
 
       setOpen(false);
       onAdded();
+      toast("Projekt pridaný.", "success");
     } finally {
       setPending(false);
     }

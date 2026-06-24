@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { generateTest } from "@/lib/generate-test-client";
 import { triggerTests } from "@/lib/security-client";
+import { toast } from "@/components/toaster";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -126,8 +127,11 @@ function TestsView() {
       setTriggerMsg(
         "Testy spustené. Výsledky sa objavia o ~1 minútu — potom obnov stránku.",
       );
+      toast("Testy spustené.", "success");
     } catch (e) {
-      setTriggerMsg(e instanceof Error ? e.message : "Spustenie zlyhalo.");
+      const m = e instanceof Error ? e.message : "Spustenie zlyhalo.";
+      setTriggerMsg(m);
+      toast(m, "error");
     } finally {
       setTriggering(false);
     }
