@@ -21,30 +21,68 @@ const PAINS: { t: string; d: string }[] = [
   },
 ];
 
-const FEATURES: { t: string; d: string }[] = [
+type Feature = { t: string; d: string; long: string; example: string[] };
+
+const FEATURES: Feature[] = [
   {
     t: "Monitoring dostupnosti 24/7",
     d: "Sledujeme tvoj web každých 15 minút, deň aj noc. Vieš o výpadku ako prvý — nie od zákazníka. K tomu rýchlosť odozvy, uptime a história.",
+    long: "Tvoj web kontrolujeme automaticky každých 15 minút z našich serverov — funguje to, aj keď máš počítač vypnutý. Meriame dostupnosť, HTTP status a presný čas odozvy. Keď web spadne, pošleme ti upozornenie do pár minút (Slack, Discord, e-mail alebo pop-up na ploche). Vidíš uptime v percentách, graf rýchlosti v čase a kompletnú históriu — takže presne vieš, kedy a ako dlho bol web nedostupný.",
+    example: [
+      "Stav: Online · Uptime 99,8 % · Odozva 240 ms",
+      "Upozornenie: web nedostupný o 14:32 (HTTP 503)",
+      "Graf odozvy za posledných 50 kontrol",
+    ],
   },
   {
     t: "Kontrola, či web naozaj funguje",
     d: "Nielen „je hore“. Zistíme, keď zmizne formulár, obrázky alebo obsah — chyby, ktoré bežný monitoring prehliadne, no zákazníka odplašia.",
+    long: "Bežný monitoring povie len „web vrátil 200 OK“. My ideme ďalej — porovnávame obsah stránky a upozorníme, keď sa stane niečo dôležité: zmizne kontaktný či objednávkový formulár, vypadnú obrázky, výrazne ubudne textu alebo sa zmení titulok. To sú chyby, ktoré web navonok „funguje“, no v skutočnosti strácaš cez ne dopyty a zákazníkov.",
+    example: [
+      "Kritické: Zmizol formulár — web je hore, ale formulár tam nie je",
+      "Varovanie: Zo stránky zmizli všetky obrázky",
+      "Info: Titulok sa zmenil",
+    ],
   },
   {
     t: "Bezpečnostný audit so známkou A–F",
     d: "Preveríme HTTPS, certifikát, bezpečnostné hlavičky, cookies, DNS a odhalené citlivé súbory. Dostaneš jasnú známku a zoznam, čo opraviť.",
+    long: "Jedným klikom preveríme bezpečnosť webu a dáme mu známku A–F. Kontrolujeme HTTPS a platnosť certifikátu, bezpečnostné hlavičky (HSTS, CSP, X-Frame-Options…), nastavenie cookies, DNS záznamy (SPF, DMARC, DNSSEC) aj to, či nie sú verejne prístupné citlivé súbory ako .env či .git. K tomu dostaneš AI zhrnutie po slovensky — čo to znamená a čo opraviť ako prvé. Ideálny podklad pre klienta.",
+    example: [
+      "Známka: F (34/100)",
+      "Chýba HSTS, CSP, ochrana proti clickjackingu",
+      "AI: „Najprv vynúť HTTPS, potom zabezpeč cookies…“",
+    ],
   },
   {
     t: "Výkon a SEO (Lighthouse)",
     d: "Rýchlosť, prístupnosť, SEO a najlepšie praktiky v číslach. Plus kontrola rozbitých odkazov a blacklistu. Vieš, kde web stráca návštevníkov.",
+    long: "Zmeriame výkon webu cez Google Lighthouse — rýchlosť načítania (Core Web Vitals), prístupnosť, SEO a najlepšie praktiky, všetko v skóre 0–100. Navyše prejdeme web a nájdeme rozbité odkazy (404) a overíme, či doména nie je na zozname škodlivých stránok. Pomalý web odrádza návštevníkov aj Google — toto ti presne ukáže, kde strácaš a čo zlepšiť.",
+    example: [
+      "Výkon 80 · Prístupnosť 81 · Best practices 77 · SEO 100",
+      "Rozbité odkazy: 4 (chýba favicon, manifest…)",
+      "Blacklist: čistý",
+    ],
   },
   {
     t: "Reálne testy v prehliadači",
     d: "Otestujeme kľúčové procesy ako skutočný používateľ — prihlásenie, formulár, košík. Test napíšeš bežnou rečou a AI ho vytvorí za teba.",
+    long: "Skutočne preklikáme web ako reálny zákazník — vyplníme formulár, klikneme na tlačidlo, prejdeme objednávku — a overíme, že to naozaj funguje (nielen že sa stránka načíta). Test nemusíš vedieť programovať: napíšeš bežnou rečou, čo overiť, a AI ho vytvorí za teba. Testy bežia automaticky každých 6 hodín a hneď vieš, keď sa niektorý kľúčový proces pokazí.",
+    example: [
+      "Napíšeš: „Over, že rezervačný formulár funguje a zobrazí poďakovanie“",
+      "AI vytvorí kroky a spustí test",
+      "Výsledok: PASS / FAIL pri každom teste",
+    ],
   },
   {
     t: "Reporty a upozornenia",
     d: "Zrozumiteľné AI reporty pre klienta (aj PDF), verejný status page a okamžité upozornenia, keď sa niečo pokazí. Bez technického žargónu.",
+    long: "Z dát urobíme zrozumiteľný report pre majiteľa webu — v slovenčine, bez žargónu, exportovateľný do PDF s tvojím menom. Pre klienta vieš zapnúť aj verejný status page, kde vidí stav svojho webu naživo. A keď sa niečo pokazí, pošleme upozornenie tam, kde to uvidíš: Slack, Discord, e-mail alebo pop-up notifikácia na ploche.",
+    example: [
+      "Týždenný PDF report: „Web bežal 99,9 %, načítaval sa za 0,4 s…“",
+      "Verejný status page pre klienta",
+      "Okamžité alerty pri výpadku",
+    ],
   },
 ];
 
@@ -142,6 +180,7 @@ const PLANS: {
 export default function Home() {
   const router = useRouter();
   const [ready, setReady] = useState(false);
+  const [openFeature, setOpenFeature] = useState<Feature | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -246,13 +285,17 @@ export default function Home() {
           </p>
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map((f) => (
-              <div
+              <button
                 key={f.t}
-                className="rounded-2xl border border-border bg-surface p-6 transition-colors hover:border-primary/40"
+                onClick={() => setOpenFeature(f)}
+                className="rounded-2xl border border-border bg-surface p-6 text-left transition-colors hover:border-primary/40"
               >
                 <h3 className="font-medium">{f.t}</h3>
                 <p className="mt-2 text-sm text-muted">{f.d}</p>
-              </div>
+                <span className="mt-3 inline-block text-sm font-medium text-primary">
+                  Zistiť viac →
+                </span>
+              </button>
             ))}
           </div>
         </section>
@@ -441,6 +484,48 @@ export default function Home() {
           </div>
         </div>
       </footer>
+
+      {openFeature && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          onClick={() => setOpenFeature(null)}
+        >
+          <div
+            className="w-full max-w-lg animate-in rounded-2xl border border-border bg-surface p-7 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-start justify-between gap-4">
+              <h3 className="text-lg font-semibold">{openFeature.t}</h3>
+              <button
+                onClick={() => setOpenFeature(null)}
+                className="text-muted hover:text-foreground"
+                aria-label="Zavrieť"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="text-sm leading-relaxed text-foreground/80">
+              {openFeature.long}
+            </p>
+            <div className="mt-5 rounded-xl border border-border bg-surface-2 p-4">
+              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted">
+                Ukážka
+              </p>
+              <ul className="flex flex-col gap-1.5">
+                {openFeature.example.map((e, i) => (
+                  <li key={i} className="flex gap-2 text-sm text-foreground/80">
+                    <span className="text-primary">•</span>
+                    {e}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <Link href="/signup" className="mt-6 block">
+              <Button className="w-full">Vyskúšať zadarmo</Button>
+            </Link>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
