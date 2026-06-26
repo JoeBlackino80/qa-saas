@@ -226,6 +226,13 @@ function ProjectDetail() {
             <Link href={`/report?id=${project.id}`}>
               <Button variant="ghost">Klientsky report</Button>
             </Link>
+            <Button
+              variant="ghost"
+              onClick={() => setConfirmDelete(true)}
+              className="text-danger hover:bg-danger/10"
+            >
+              Zmazať
+            </Button>
             <Button onClick={runCheck} disabled={running}>
               {running ? "Kontrolujem…" : "Spustiť kontrolu"}
             </Button>
@@ -609,18 +616,6 @@ function ProjectDetail() {
           ))}
         </ul>
       )}
-
-      <div className="mt-10 flex items-center justify-between rounded-2xl border border-danger/30 bg-danger/5 p-5">
-        <div>
-          <p className="text-sm font-medium">Zmazať projekt</p>
-          <p className="text-xs text-muted">
-            Natrvalo odstráni projekt aj všetky jeho kontroly, audity a testy.
-          </p>
-        </div>
-        <Button variant="danger" onClick={() => setConfirmDelete(true)}>
-          Zmazať
-        </Button>
-      </div>
 
       {confirmDelete && (
         <div
