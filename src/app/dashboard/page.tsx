@@ -9,6 +9,7 @@ import type { Project } from "@/lib/types";
 import { AddProjectModal } from "./add-project-modal";
 import { AlertSettings } from "./alert-settings";
 import { PushSettings } from "./push-settings";
+import { AccountSettings } from "./account-settings";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -98,9 +99,10 @@ export default function DashboardPage() {
           <AddProjectModal onAdded={load} />
         </div>
 
-        <div className="mb-6 flex flex-wrap gap-4">
+        <div className="mb-6 flex flex-wrap items-start gap-4">
           <AlertSettings />
           <PushSettings />
+          <AccountSettings />
         </div>
 
         {loading && <p className="text-sm text-muted">Načítavam…</p>}
