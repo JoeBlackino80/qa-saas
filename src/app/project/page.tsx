@@ -31,6 +31,8 @@ function ProjectDetail() {
   const [quality, setQuality] = useState<QualityAudit | null>(null);
   const [qRunning, setQRunning] = useState(false);
   const [qError, setQError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -137,6 +139,28 @@ function ProjectDetail() {
       toast(m, "error");
     } finally {
       setAuditing(false);
+    }
+  }
+
+  async function deleteProject() {
+    if (!id) return;
+    setDeleting(true);
+    try {
+      const supabase = createClient();
+      const { error: delErr } = await supabase
+        .from("projects")
+        .delete()
+        .eq("id", id);
+      if (delErr) {
+        toast(delErr.message, "error");
+        setDeleting(false);
+        return;
+      }
+      toast("Projekt zmazaný.", "success");
+      router.replace("/dashboard");
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Mazanie zlyhalo.", "error");
+      setDeleting(false);
     }
   }
 
@@ -584,6 +608,48 @@ function ProjectDetail() {
             </li>
           ))}
         </ul>
+      )}
+
+      <div className="mt-10 flex items-center justify-between rounded-2xl border border-danger/30 bg-danger/5 p-5">
+        <div>
+          <p className="text-sm font-medium">Zmazať projekt</p>
+          <p className="text-xs text-muted">
+            Natrvalo odstráni projekt aj všetky jeho kontroly, audity a testy.
+          </p>
+        </div>
+        <Button variant="danger" onClick={() => setConfirmDelete(true)}>
+          Zmazať
+        </Button>
+      </div>
+
+      {confirmDelete && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          onClick={() => !deleting && setConfirmDelete(false)}
+        >
+          <div
+            className="w-full max-w-md animate-in rounded-2xl border border-border bg-surface p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold">Zmazať „{project.name}"?</h3>
+            <p className="mt-2 text-sm text-muted">
+              Táto akcia sa nedá vrátiť. Odstráni sa projekt aj celá jeho
+              história kontrol, auditov a testov.
+            </p>
+            <div className="mt-6 flex justify-end gap-2">
+              <Button
+                variant="ghost"
+                onClick={() => setConfirmDelete(false)}
+                disabled={deleting}
+              >
+                Zrušiť
+              </Button>
+              <Button variant="danger" onClick={deleteProject} disabled={deleting}>
+                {deleting ? "Mažem…" : "Áno, zmazať"}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
