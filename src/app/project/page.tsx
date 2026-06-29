@@ -32,6 +32,10 @@ function ProjectDetail() {
   const [quality, setQuality] = useState<QualityAudit | null>(null);
   const [qRunning, setQRunning] = useState(false);
   const [qError, setQError] = useState<string | null>(null);
+  const [secPrev, setSecPrev] = useState<number | null>(null);
+  const [qualPrev, setQualPrev] = useState<number | null>(null);
+  const [secTrend, setSecTrend] = useState<number[]>([]);
+  const [qualTrend, setQualTrend] = useState<number[]>([]);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [runningAll, setRunningAll] = useState(false);
@@ -96,9 +100,11 @@ function ProjectDetail() {
       .select("grade, score, findings, ai_summary, created_at")
       .eq("project_id", id)
       .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    setAudit((aud as SecurityAudit) ?? null);
+      .limit(20);
+    const secRows = (aud ?? []) as SecurityAudit[];
+    setAudit(secRows[0] ?? null);
+    setSecPrev(secRows[1]?.score ?? null);
+    setSecTrend([...secRows].reverse().map((a) => a.score));
 
     const { data: q } = await supabase
       .from("quality_audits")
@@ -107,9 +113,11 @@ function ProjectDetail() {
       )
       .eq("project_id", id)
       .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    setQuality((q as QualityAudit) ?? null);
+      .limit(20);
+    const qRows = (q ?? []) as QualityAudit[];
+    setQuality(qRows[0] ?? null);
+    setQualPrev(qRows[1]?.performance ?? null);
+    setQualTrend([...qRows].reverse().map((a) => a.performance ?? 0));
 
     setLoading(false);
   }, [id, router]);
@@ -233,6 +241,76 @@ function ProjectDetail() {
   const chart = [...rows].reverse();
   const maxMs = Math.max(1, ...times);
 
+  // Overall website grade — average of availability, security and performance.
+  const perfAvg = quality
+    ? Math.round(
+        ((quality.performance ?? 0) +
+          (quality.accessibility ?? 0) +
+          (quality.best_practices ?? 0) +
+          (quality.seo ?? 0)) /
+          4,
+      )
+    : null;
+  const secScore = audit?.score ?? null;
+  const overallParts = [uptime, secScore, perfAvg].filter(
+    (x): x is number => x !== null,
+  );
+  const overall = overallParts.length
+    ? Math.round(overallParts.reduce((a, b) => a + b, 0) / overallParts.length)
+    : null;
+  const gradeOf = (s: number | null) =>
+    s === null
+      ? "—"
+      : s >= 90
+        ? "A"
+        : s >= 80
+          ? "B"
+          : s >= 70
+            ? "C"
+            : s >= 55
+              ? "D"
+              : "F";
+  const gradeColor = (g: string) =>
+    ["A", "B"].includes(g)
+      ? "text-ok"
+      : g === "C"
+        ? "text-warn"
+        : g === "—"
+          ? "text-muted"
+          : "text-danger";
+  const overallGrade = gradeOf(overall);
+
+  function Delta({ now, prev }: { now: number | null; prev: number | null }) {
+    if (now === null || prev === null) return null;
+    const d = now - prev;
+    if (d === 0)
+      return <span className="text-xs text-muted">bez zmeny</span>;
+    return (
+      <span className={`text-xs font-medium ${d > 0 ? "text-ok" : "text-danger"}`}>
+        {d > 0 ? "↑" : "↓"} {Math.abs(d)} oproti minule
+      </span>
+    );
+  }
+
+  function Sparkline({ data }: { data: number[] }) {
+    if (data.length < 2) return null;
+    const max = 100;
+    return (
+      <div className="flex h-10 items-end gap-0.5">
+        {data.map((v, i) => (
+          <div
+            key={i}
+            title={`${v}`}
+            className={`w-1.5 rounded-t-sm ${
+              v >= 90 ? "bg-ok" : v >= 50 ? "bg-warn" : "bg-danger"
+            }`}
+            style={{ height: `${Math.max(6, (v / max) * 100)}%` }}
+          />
+        ))}
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="mb-5 flex items-start justify-between gap-4">
@@ -280,6 +358,50 @@ function ProjectDetail() {
         </Link>
       </div>
       {error && <p className="mb-4 text-sm text-danger">{error}</p>}
+
+      {overall !== null && (
+        <div className="mb-6 flex animate-in flex-wrap items-center gap-6 rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/5 to-surface px-6 py-5">
+          <div className="flex items-center gap-4">
+            <span
+              className={`grid h-16 w-16 place-items-center rounded-2xl bg-surface text-3xl font-bold ${gradeColor(overallGrade)}`}
+            >
+              {overallGrade}
+            </span>
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted">
+                Celková známka webu
+              </p>
+              <p className="tabular text-2xl font-semibold">{overall}/100</p>
+            </div>
+          </div>
+          <div className="ml-auto flex flex-wrap gap-6 text-sm">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted">
+                Dostupnosť
+              </p>
+              <p className="tabular mt-0.5 font-semibold">
+                {uptime !== null ? `${uptime}%` : "—"}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted">
+                Bezpečnosť
+              </p>
+              <p className="tabular mt-0.5 font-semibold">
+                {secScore !== null ? `${secScore}/100` : "—"}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted">
+                Výkon
+              </p>
+              <p className="tabular mt-0.5 font-semibold">
+                {perfAvg !== null ? `${perfAvg}/100` : "—"}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {total > 0 && (
         <div className="mb-6 flex animate-in flex-wrap items-center gap-6 rounded-2xl border border-border bg-surface px-6 py-5">
@@ -431,7 +553,14 @@ function ProjectDetail() {
                   {audit.score}/100
                 </p>
                 <p className="text-xs text-muted">bezpečnostné skóre</p>
+                <Delta now={audit.score} prev={secPrev} />
               </div>
+              {secTrend.length > 1 && (
+                <div className="hidden sm:block">
+                  <p className="mb-1 text-xs text-muted">trend</p>
+                  <Sparkline data={secTrend} />
+                </div>
+              )}
               <div className="ml-auto text-right text-xs">
                 <div className="flex justify-end gap-1.5">
                   {(() => {
@@ -507,10 +636,23 @@ function ProjectDetail() {
                 ? `naposledy ${new Date(quality.created_at).toLocaleString("sk-SK")}`
                 : "Lighthouse skóre, rozbité odkazy, blacklist."}
             </p>
+            {quality && (
+              <div className="mt-1">
+                <Delta now={quality.performance} prev={qualPrev} />
+              </div>
+            )}
           </div>
-          <Button variant="ghost" onClick={runQuality} disabled={busyAny}>
-            {qRunning ? "Analyzujem…" : "Spustiť audit výkonu"}
-          </Button>
+          <div className="flex items-center gap-4">
+            {qualTrend.length > 1 && (
+              <div className="hidden sm:block">
+                <p className="mb-1 text-xs text-muted">trend výkonu</p>
+                <Sparkline data={qualTrend} />
+              </div>
+            )}
+            <Button variant="ghost" onClick={runQuality} disabled={busyAny}>
+              {qRunning ? "Analyzujem…" : "Spustiť audit výkonu"}
+            </Button>
+          </div>
         </div>
         {qError && <p className="mb-3 text-sm text-warn">{qError}</p>}
         {!quality ? (
