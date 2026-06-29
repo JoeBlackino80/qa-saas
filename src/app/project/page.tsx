@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Markdown } from "@/components/markdown";
 import { toast } from "@/components/toaster";
+import { fixFor } from "@/lib/fixes";
 import type { Check, Project, QualityAudit } from "@/lib/types";
 
 function ProjectDetail() {
@@ -36,6 +37,7 @@ function ProjectDetail() {
   const [qualPrev, setQualPrev] = useState<number | null>(null);
   const [secTrend, setSecTrend] = useState<number[]>([]);
   const [qualTrend, setQualTrend] = useState<number[]>([]);
+  const [openFix, setOpenFix] = useState<number | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [runningAll, setRunningAll] = useState(false);
@@ -590,29 +592,70 @@ function ProjectDetail() {
                   const order = { high: 0, medium: 1, low: 2, ok: 3 };
                   return order[a.severity] - order[b.severity];
                 })
-                .map((f, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm">
-                    <span
-                      className={`mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ${
-                        f.severity === "high"
-                          ? "bg-danger/15 text-danger"
-                          : f.severity === "medium"
-                            ? "bg-warn/15 text-warn"
-                            : f.severity === "low"
-                              ? "bg-surface-2 text-muted"
-                              : "bg-ok/15 text-ok"
-                      }`}
-                    >
-                      {f.severity === "ok" ? "OK" : f.severity}
-                    </span>
-                    <span className="text-foreground/80">
-                      <span className="font-medium text-foreground">
-                        {f.title}
-                      </span>{" "}
-                      — {f.detail}
-                    </span>
-                  </li>
-                ))}
+                .map((f, i) => {
+                  const fix = f.severity !== "ok" ? fixFor(f.title) : null;
+                  return (
+                    <li key={i} className="text-sm">
+                      <div className="flex items-start gap-2">
+                        <span
+                          className={`mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ${
+                            f.severity === "high"
+                              ? "bg-danger/15 text-danger"
+                              : f.severity === "medium"
+                                ? "bg-warn/15 text-warn"
+                                : f.severity === "low"
+                                  ? "bg-surface-2 text-muted"
+                                  : "bg-ok/15 text-ok"
+                          }`}
+                        >
+                          {f.severity === "ok" ? "OK" : f.severity}
+                        </span>
+                        <span className="text-foreground/80">
+                          <span className="font-medium text-foreground">
+                            {f.title}
+                          </span>{" "}
+                          — {f.detail}
+                          {fix && (
+                            <button
+                              onClick={() =>
+                                setOpenFix(openFix === i ? null : i)
+                              }
+                              className="ml-2 whitespace-nowrap font-medium text-primary hover:underline"
+                            >
+                              {openFix === i ? "Skryť" : "Ako opraviť →"}
+                            </button>
+                          )}
+                        </span>
+                      </div>
+                      {fix && openFix === i && (
+                        <div className="ml-10 mt-2 rounded-lg border border-border bg-surface-2 p-3">
+                          <p className="text-foreground/80">{fix.how}</p>
+                          {fix.code && (
+                            <div className="mt-2">
+                              <div className="mb-1 flex items-center justify-between">
+                                <span className="text-[10px] uppercase tracking-wide text-muted">
+                                  {fix.lang ?? "kód"}
+                                </span>
+                                <button
+                                  onClick={() => {
+                                    navigator.clipboard?.writeText(fix.code!);
+                                    toast("Skopírované.", "success");
+                                  }}
+                                  className="text-xs text-primary hover:underline"
+                                >
+                                  Kopírovať
+                                </button>
+                              </div>
+                              <pre className="overflow-x-auto rounded bg-background p-3 font-mono text-xs text-foreground/90">
+                                {fix.code}
+                              </pre>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
             </ul>
 
             {audit.ai_summary && (
