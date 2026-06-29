@@ -8,6 +8,7 @@ import { triggerCheck } from "@/lib/run-check-client";
 import {
   runSecurityAudit,
   runQualityAudit,
+  triggerTests,
   type SecurityAudit,
 } from "@/lib/security-client";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,34 @@ function ProjectDetail() {
   const [qError, setQError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [runningAll, setRunningAll] = useState(false);
+
+  const busyAny = running || auditing || qRunning || runningAll;
+
+  async function runAll() {
+    if (!id) return;
+    setRunningAll(true);
+    toast("Spúšťam všetko…", "info");
+    try {
+      await triggerCheck(id, true);
+      try {
+        setAudit(await runSecurityAudit(id));
+      } catch { /* keep going */ }
+      try {
+        const q = await runQualityAudit(id);
+        setQuality(q as QualityAudit);
+      } catch { /* keep going */ }
+      try {
+        await triggerTests();
+      } catch { /* keep going */ }
+      await load();
+      toast("Hotovo — kontrola a audity dokončené, testy spustené.", "success");
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Niečo zlyhalo.", "error");
+    } finally {
+      setRunningAll(false);
+    }
+  }
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -206,7 +235,7 @@ function ProjectDetail() {
 
   return (
     <>
-      <div className="mb-8 flex items-start justify-between gap-4">
+      <div className="mb-5 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{project.name}</h1>
           <a
@@ -218,28 +247,39 @@ function ProjectDetail() {
             {project.base_url}
           </a>
         </div>
-        <div className="flex flex-col items-end gap-2">
-          <div className="flex flex-wrap justify-end gap-2">
-            <Link href={`/tests?id=${project.id}`}>
-              <Button variant="ghost">Testy</Button>
-            </Link>
-            <Link href={`/report?id=${project.id}`}>
-              <Button variant="ghost">Klientsky report</Button>
-            </Link>
-            <Button
-              variant="ghost"
-              onClick={() => setConfirmDelete(true)}
-              className="text-danger hover:bg-danger/10"
-            >
-              Zmazať
-            </Button>
-            <Button onClick={runCheck} disabled={running}>
-              {running ? "Kontrolujem…" : "Spustiť kontrolu"}
-            </Button>
-          </div>
-          {error && <p className="text-sm text-danger">{error}</p>}
+        <div className="flex flex-wrap justify-end gap-2">
+          <Link href={`/report?id=${project.id}`}>
+            <Button variant="ghost">Klientsky report</Button>
+          </Link>
+          <Button
+            variant="ghost"
+            onClick={() => setConfirmDelete(true)}
+            className="text-danger hover:bg-danger/10"
+          >
+            Zmazať
+          </Button>
         </div>
       </div>
+
+      <div className="mb-6 flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-surface p-3">
+        <Button onClick={runAll} disabled={busyAny}>
+          {runningAll ? "Spúšťam všetko…" : "Spustiť všetko"}
+        </Button>
+        <span className="mx-1 hidden h-6 w-px bg-border sm:block" />
+        <Button variant="ghost" onClick={runCheck} disabled={busyAny}>
+          {running ? "Kontrolujem…" : "Kontrola"}
+        </Button>
+        <Button variant="ghost" onClick={runAudit} disabled={busyAny}>
+          {auditing ? "Analyzujem…" : "Bezpečnostný audit"}
+        </Button>
+        <Button variant="ghost" onClick={runQuality} disabled={busyAny}>
+          {qRunning ? "Analyzujem…" : "Audit výkonu"}
+        </Button>
+        <Link href={`/tests?id=${project.id}`}>
+          <Button variant="ghost">Testy</Button>
+        </Link>
+      </div>
+      {error && <p className="mb-4 text-sm text-danger">{error}</p>}
 
       {total > 0 && (
         <div className="mb-6 flex animate-in flex-wrap items-center gap-6 rounded-2xl border border-border bg-surface px-6 py-5">
@@ -362,7 +402,7 @@ function ProjectDetail() {
               len na weboch, ktoré vlastníš alebo máš povolenie.
             </p>
           </div>
-          <Button variant="ghost" onClick={runAudit} disabled={auditing}>
+          <Button variant="ghost" onClick={runAudit} disabled={busyAny}>
             {auditing ? "Analyzujem…" : "Spustiť audit"}
           </Button>
         </div>
@@ -447,7 +487,7 @@ function ProjectDetail() {
                 : "Lighthouse skóre, rozbité odkazy, blacklist."}
             </p>
           </div>
-          <Button variant="ghost" onClick={runQuality} disabled={qRunning}>
+          <Button variant="ghost" onClick={runQuality} disabled={busyAny}>
             {qRunning ? "Analyzujem…" : "Spustiť audit výkonu"}
           </Button>
         </div>
