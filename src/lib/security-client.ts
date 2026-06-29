@@ -37,7 +37,8 @@ async function callFn(url: string, projectId: string) {
 }
 
 export async function runSecurityAudit(projectId: string): Promise<SecurityAudit> {
-  return (await callFn(URL, projectId)) as SecurityAudit;
+  const d = await callFn(URL, projectId);
+  return { ...d, created_at: d.created_at ?? d.generatedAt } as SecurityAudit;
 }
 
 export async function runQualityAudit(projectId: string) {

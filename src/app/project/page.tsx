@@ -414,7 +414,7 @@ function ProjectDetail() {
 
         {audit && (
           <div className="flex flex-col gap-5">
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-4">
               <span
                 className={`grid h-14 w-14 place-items-center rounded-xl text-2xl font-bold ${
                   ["A", "B"].includes(audit.grade)
@@ -431,6 +431,27 @@ function ProjectDetail() {
                   {audit.score}/100
                 </p>
                 <p className="text-xs text-muted">bezpečnostné skóre</p>
+              </div>
+              <div className="ml-auto text-right text-xs">
+                <div className="flex justify-end gap-1.5">
+                  {(() => {
+                    const c = audit.findings.filter((f) => f.severity === "high").length;
+                    const w = audit.findings.filter((f) => f.severity === "medium").length;
+                    const o = audit.findings.filter((f) => f.severity === "ok").length;
+                    return (
+                      <>
+                        {c > 0 && <span className="rounded bg-danger/15 px-1.5 py-0.5 font-medium text-danger">{c} kritické</span>}
+                        {w > 0 && <span className="rounded bg-warn/15 px-1.5 py-0.5 font-medium text-warn">{w} varovaní</span>}
+                        <span className="rounded bg-ok/15 px-1.5 py-0.5 font-medium text-ok">{o} OK</span>
+                      </>
+                    );
+                  })()}
+                </div>
+                {audit.created_at && (
+                  <p className="tabular mt-1.5 text-muted">
+                    {new Date(audit.created_at).toLocaleString("sk-SK")}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -481,9 +502,9 @@ function ProjectDetail() {
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-sm font-medium">Výkon &amp; stabilita</p>
-            <p className="text-xs text-muted">
+            <p className="tabular text-xs text-muted">
               {quality
-                ? `aktualizované ${new Date(quality.created_at).toLocaleDateString("sk-SK")}`
+                ? `naposledy ${new Date(quality.created_at).toLocaleString("sk-SK")}`
                 : "Lighthouse skóre, rozbité odkazy, blacklist."}
             </p>
           </div>
@@ -525,6 +546,20 @@ function ProjectDetail() {
                     {val ?? "—"}
                   </p>
                   <p className="mt-1 text-xs text-muted">{label}</p>
+                  <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-border">
+                    <div
+                      className={`h-full rounded-full ${
+                        val === null
+                          ? "bg-muted"
+                          : val >= 90
+                            ? "bg-ok"
+                            : val >= 50
+                              ? "bg-warn"
+                              : "bg-danger"
+                      }`}
+                      style={{ width: `${val ?? 0}%` }}
+                    />
+                  </div>
                 </div>
               ))}
             </div>
