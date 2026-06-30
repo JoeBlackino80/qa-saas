@@ -43,8 +43,8 @@ export function fixFor(title: string): Fix | null {
     };
   if (t.includes("verzia servera"))
     return {
-      how: "Skry verziu servera. .htaccess vie obmedziť hlavičku; úplné skrytie je v konfigurácii servera (ServerTokens Prod).",
-      code: 'Header always unset "X-Powered-By"\nServerTokens Prod',
+      how: "V .htaccess vieš odstrániť hlavičku X-Powered-By (kód nižšie). Samotnú hlavičku „Server: Apache“ sa cez .htaccess skryť nedá — to je nastavenie servera (ServerTokens Prod v httpd.conf), o ktoré treba požiadať hosting. NEDÁVAJ ServerTokens do .htaccess, spôsobí chybu 500.",
+      code: "<IfModule mod_headers.c>\n  Header always unset X-Powered-By\n</IfModule>",
       lang: "apache",
     };
   if (t.includes("http → https") || t.includes("presmerovanie"))
