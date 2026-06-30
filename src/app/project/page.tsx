@@ -18,6 +18,7 @@ import { toast } from "@/components/toaster";
 import { fixFor } from "@/lib/fixes";
 import { checkExpiry } from "@/lib/expiry-client";
 import { askAssistant } from "@/lib/assistant-client";
+import { FixRequest } from "@/components/fix-request";
 import type { Check, Project, QualityAudit } from "@/lib/types";
 
 function ProjectDetail() {
@@ -727,9 +728,19 @@ function ProjectDetail() {
               len na weboch, ktoré vlastníš alebo máš povolenie.
             </p>
           </div>
-          <Button variant="ghost" onClick={runAudit} disabled={busyAny}>
-            {auditing ? "Analyzujem…" : "Spustiť audit"}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {audit && (
+              <FixRequest
+                projectName={project.name}
+                baseUrl={project.base_url}
+                findings={audit.findings}
+                brokenLinks={quality?.broken_links}
+              />
+            )}
+            <Button variant="ghost" onClick={runAudit} disabled={busyAny}>
+              {auditing ? "Analyzujem…" : "Spustiť audit"}
+            </Button>
+          </div>
         </div>
         {auditError && <p className="mb-3 text-sm text-danger">{auditError}</p>}
 
