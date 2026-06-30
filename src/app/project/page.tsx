@@ -787,54 +787,68 @@ function ProjectDetail() {
               </div>
             </div>
 
-            <ul className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-2">
               {[...audit.findings]
+                .filter((f) => f.severity !== "ok")
                 .sort((a, b) => {
                   const order = { high: 0, medium: 1, low: 2, ok: 3 };
                   return order[a.severity] - order[b.severity];
                 })
                 .map((f, i) => {
-                  const fix = f.severity !== "ok" ? fixFor(f.title) : null;
+                  const fix = fixFor(f.title);
+                  const label =
+                    f.severity === "high"
+                      ? "Vysoké"
+                      : f.severity === "medium"
+                        ? "Stredné"
+                        : "Nízke";
+                  const pill =
+                    f.severity === "high"
+                      ? "bg-danger/15 text-danger"
+                      : f.severity === "medium"
+                        ? "bg-warn/15 text-warn"
+                        : "bg-surface-2 text-muted";
+                  const accent =
+                    f.severity === "high"
+                      ? "border-l-danger"
+                      : f.severity === "medium"
+                        ? "border-l-warn"
+                        : "border-l-border";
                   return (
-                    <li key={i} className="text-sm">
-                      <div className="flex items-start gap-2">
+                    <div
+                      key={i}
+                      className={`overflow-hidden rounded-xl border border-border border-l-[3px] bg-surface ${accent}`}
+                    >
+                      <div className="flex items-start gap-3 p-3.5">
                         <span
-                          className={`mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ${
-                            f.severity === "high"
-                              ? "bg-danger/15 text-danger"
-                              : f.severity === "medium"
-                                ? "bg-warn/15 text-warn"
-                                : f.severity === "low"
-                                  ? "bg-surface-2 text-muted"
-                                  : "bg-ok/15 text-ok"
-                          }`}
+                          className={`mt-0.5 shrink-0 rounded-md px-2 py-0.5 text-[11px] font-semibold ${pill}`}
                         >
-                          {f.severity === "ok" ? "OK" : f.severity}
+                          {label}
                         </span>
-                        <span className="text-foreground/80">
-                          <span className="font-medium text-foreground">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold text-foreground">
                             {f.title}
-                          </span>{" "}
-                          — {f.detail}
-                          {fix && (
-                            <button
-                              onClick={() =>
-                                setOpenFix(openFix === i ? null : i)
-                              }
-                              className="ml-2 whitespace-nowrap font-medium text-primary hover:underline"
-                            >
-                              {openFix === i ? "Skryť" : "Ako opraviť →"}
-                            </button>
-                          )}
-                        </span>
+                          </p>
+                          <p className="mt-0.5 text-sm text-muted">{f.detail}</p>
+                        </div>
+                        {fix && (
+                          <button
+                            onClick={() =>
+                              setOpenFix(openFix === i ? null : i)
+                            }
+                            className="shrink-0 rounded-lg border border-border px-2.5 py-1 text-xs font-medium text-primary transition-colors hover:bg-surface-2"
+                          >
+                            {openFix === i ? "Skryť" : "Ako opraviť"}
+                          </button>
+                        )}
                       </div>
                       {fix && openFix === i && (
-                        <div className="ml-10 mt-2 rounded-lg border border-border bg-surface-2 p-3">
-                          <p className="text-foreground/80">{fix.how}</p>
+                        <div className="border-t border-border bg-surface-2/60 p-3.5">
+                          <p className="text-sm text-foreground/80">{fix.how}</p>
                           {fix.code && (
-                            <div className="mt-2">
-                              <div className="mb-1 flex items-center justify-between">
-                                <span className="text-[10px] uppercase tracking-wide text-muted">
+                            <div className="mt-3">
+                              <div className="mb-1.5 flex items-center justify-between">
+                                <span className="text-[10px] font-medium uppercase tracking-wide text-muted">
                                   {fix.lang ?? "kód"}
                                 </span>
                                 <button
@@ -842,22 +856,51 @@ function ProjectDetail() {
                                     navigator.clipboard?.writeText(fix.code!);
                                     toast("Skopírované.", "success");
                                   }}
-                                  className="text-xs text-primary hover:underline"
+                                  className="rounded-md border border-border bg-surface px-2 py-0.5 text-xs font-medium text-primary transition-colors hover:bg-surface-2"
                                 >
                                   Kopírovať
                                 </button>
                               </div>
-                              <pre className="overflow-x-auto rounded bg-background p-3 font-mono text-xs text-foreground/90">
+                              <pre className="overflow-x-auto rounded-lg border border-border bg-background p-3 font-mono text-xs leading-relaxed text-foreground/90">
                                 {fix.code}
                               </pre>
                             </div>
                           )}
                         </div>
                       )}
-                    </li>
+                    </div>
                   );
                 })}
-            </ul>
+
+              {(() => {
+                const oks = audit.findings.filter((f) => f.severity === "ok");
+                if (oks.length === 0) return null;
+                return (
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    {oks.map((f, i) => (
+                      <span
+                        key={i}
+                        title={f.detail}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-ok/10 px-2.5 py-1 text-xs font-medium text-ok"
+                      >
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.4"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="h-3 w-3"
+                        >
+                          <path d="M5 12l4 4 10-10" />
+                        </svg>
+                        {f.title}
+                      </span>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
 
             {audit.ai_summary && (
               <div className="rounded-lg border border-border bg-surface-2 p-4">
