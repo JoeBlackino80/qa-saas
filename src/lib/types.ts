@@ -9,6 +9,12 @@ export type Project = {
   base_url: string;
   created_at: string;
   public_status?: boolean;
+  auto_monitor?: boolean;
+  ssl_expires_at?: string | null;
+  domain_expires_at?: string | null;
+  expiry_checked_at?: string | null;
+  client_email?: string | null;
+  weekly_report_enabled?: boolean;
 };
 
 export type QualityAudit = {

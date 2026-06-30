@@ -10,6 +10,7 @@ import { AddProjectModal } from "./add-project-modal";
 import { AlertSettings } from "./alert-settings";
 import { PushSettings } from "./push-settings";
 import { AccountSettings } from "./account-settings";
+import { ActionPlan } from "./action-plan";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -157,6 +158,8 @@ export default function DashboardPage() {
                 </div>
               );
             })()}
+
+            <ActionPlan hasProjects={projects.length > 0} />
 
             <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {projects.map((p) => {

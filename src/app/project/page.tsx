@@ -12,9 +12,12 @@ import {
   type SecurityAudit,
 } from "@/lib/security-client";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Markdown } from "@/components/markdown";
 import { toast } from "@/components/toaster";
 import { fixFor } from "@/lib/fixes";
+import { checkExpiry } from "@/lib/expiry-client";
+import { askAssistant } from "@/lib/assistant-client";
 import type { Check, Project, QualityAudit } from "@/lib/types";
 
 function ProjectDetail() {
@@ -41,6 +44,11 @@ function ProjectDetail() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [runningAll, setRunningAll] = useState(false);
+  const [checkingExpiry, setCheckingExpiry] = useState(false);
+  const [question, setQuestion] = useState("");
+  const [answer, setAnswer] = useState<string | null>(null);
+  const [asking, setAsking] = useState(false);
+  const [emailInput, setEmailInput] = useState("");
 
   const busyAny = running || auditing || qRunning || runningAll;
 
@@ -59,6 +67,9 @@ function ProjectDetail() {
       } catch { /* keep going */ }
       try {
         await triggerTests();
+      } catch { /* keep going */ }
+      try {
+        await checkExpiry(id);
       } catch { /* keep going */ }
       await load();
       toast("Hotovo — kontrola a audity dokončené, testy spustené.", "success");
@@ -82,10 +93,13 @@ function ProjectDetail() {
 
     const { data: proj } = await supabase
       .from("projects")
-      .select("id, name, base_url, created_at, public_status")
+      .select(
+        "id, name, base_url, created_at, public_status, auto_monitor, ssl_expires_at, domain_expires_at, expiry_checked_at, client_email, weekly_report_enabled",
+      )
       .eq("id", id)
       .maybeSingle();
     setProject((proj as Project) ?? null);
+    setEmailInput((proj as Project)?.client_email ?? "");
 
     const { data: checks } = await supabase
       .from("checks")
@@ -214,6 +228,56 @@ function ProjectDetail() {
     if (!upErr) setProject({ ...project, public_status: next });
   }
 
+  async function updateProject(patch: Partial<Project>) {
+    if (!project) return;
+    const supabase = createClient();
+    const { error: upErr } = await supabase
+      .from("projects")
+      .update(patch)
+      .eq("id", project.id);
+    if (upErr) {
+      toast(upErr.message, "error");
+      return;
+    }
+    setProject({ ...project, ...patch });
+  }
+
+  async function runExpiry() {
+    if (!id) return;
+    setCheckingExpiry(true);
+    try {
+      const r = await checkExpiry(id);
+      setProject((p) =>
+        p
+          ? {
+              ...p,
+              ssl_expires_at: r.ssl_expires_at,
+              domain_expires_at: r.domain_expires_at,
+              expiry_checked_at: r.expiry_checked_at,
+            }
+          : p,
+      );
+      toast("Expirácia skontrolovaná.", "success");
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Kontrola zlyhala.", "error");
+    } finally {
+      setCheckingExpiry(false);
+    }
+  }
+
+  async function ask() {
+    if (!id || !question.trim() || asking) return;
+    setAsking(true);
+    setAnswer(null);
+    try {
+      setAnswer(await askAssistant(id, question.trim()));
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Asistent zlyhal.", "error");
+    } finally {
+      setAsking(false);
+    }
+  }
+
   if (loading) {
     return <p className="text-sm text-muted">Načítavam…</p>;
   }
@@ -281,6 +345,19 @@ function ProjectDetail() {
           ? "text-muted"
           : "text-danger";
   const overallGrade = gradeOf(overall);
+
+  const daysLeft = (iso?: string | null) =>
+    iso ? Math.floor((Date.parse(iso) - Date.now()) / 86400000) : null;
+  const expColor = (d: number | null) =>
+    d === null
+      ? "text-muted"
+      : d <= 7
+        ? "text-danger"
+        : d <= 30
+          ? "text-warn"
+          : "text-ok";
+  const sslDays = daysLeft(project.ssl_expires_at);
+  const domDays = daysLeft(project.domain_expires_at);
 
   function Delta({ now, prev }: { now: number | null; prev: number | null }) {
     if (now === null || prev === null) return null;
@@ -483,6 +560,130 @@ function ProjectDetail() {
           >
             Otvoriť status page →
           </a>
+        )}
+      </div>
+
+      <div className="mb-8 animate-in rounded-2xl border border-border bg-surface p-5">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-medium">Expirácia SSL &amp; domény</p>
+            <p className="tabular text-xs text-muted">
+              {project.expiry_checked_at
+                ? `naposledy ${new Date(project.expiry_checked_at).toLocaleString("sk-SK")}`
+                : "Ešte neskontrolované. Upozorníme ťa 30 a 7 dní vopred."}
+            </p>
+          </div>
+          <Button variant="ghost" onClick={runExpiry} disabled={checkingExpiry}>
+            {checkingExpiry ? "Kontrolujem…" : "Skontrolovať"}
+          </Button>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          {(
+            [
+              ["SSL certifikát", project.ssl_expires_at, sslDays],
+              ["Doména", project.domain_expires_at, domDays],
+            ] as [string, string | null | undefined, number | null][]
+          ).map(([label, iso, d]) => (
+            <div
+              key={label}
+              className="rounded-xl border border-border bg-surface-2 p-4"
+            >
+              <p className="text-xs uppercase tracking-wide text-muted">
+                {label}
+              </p>
+              {d === null ? (
+                <p className="mt-1 text-sm text-muted">nezistené</p>
+              ) : (
+                <>
+                  <p className={`tabular mt-1 text-2xl font-bold ${expColor(d)}`}>
+                    {d < 0 ? "vypršalo" : `${d} dní`}
+                  </p>
+                  <p className="tabular text-xs text-muted">
+                    do {new Date(iso as string).toLocaleDateString("sk-SK")}
+                  </p>
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="mb-8 animate-in rounded-2xl border border-border bg-surface p-5">
+        <p className="mb-4 text-sm font-medium">Nastavenia projektu</p>
+        <div className="flex items-center gap-4 border-b border-border pb-4">
+          <button
+            onClick={() => updateProject({ auto_monitor: !project.auto_monitor })}
+            role="switch"
+            aria-checked={Boolean(project.auto_monitor)}
+            aria-label="Automatický monitoring"
+            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
+              project.auto_monitor ? "bg-primary" : "bg-surface-2 border border-border"
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                project.auto_monitor ? "translate-x-6" : "translate-x-1"
+              }`}
+            />
+          </button>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium">Automatický monitoring (raz denne)</p>
+            <p className="text-xs text-muted">
+              Web sa skontroluje sám raz za deň (cca 6:00). Lacné — beží len pri
+              zapnutých projektoch. Inak spúšťaš kontroly ručne.
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-4 pt-4">
+          <button
+            onClick={() =>
+              updateProject({
+                weekly_report_enabled: !project.weekly_report_enabled,
+              })
+            }
+            role="switch"
+            aria-checked={Boolean(project.weekly_report_enabled)}
+            aria-label="Týždenný report e-mailom"
+            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
+              project.weekly_report_enabled
+                ? "bg-primary"
+                : "bg-surface-2 border border-border"
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                project.weekly_report_enabled ? "translate-x-6" : "translate-x-1"
+              }`}
+            />
+          </button>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium">Týždenný report e-mailom klientovi</p>
+            <p className="text-xs text-muted">
+              Každý pondelok sa klientovi pošle prehľadný report o stave webu.
+            </p>
+          </div>
+        </div>
+        {project.weekly_report_enabled && (
+          <div className="mt-3 flex flex-wrap gap-2 pl-[60px]">
+            <Input
+              id="client_email"
+              name="client_email"
+              type="email"
+              placeholder="klient@firma.sk"
+              value={emailInput}
+              onChange={(e) => setEmailInput(e.target.value)}
+              className="flex-1 min-w-[220px]"
+            />
+            <Button
+              variant="ghost"
+              onClick={() => {
+                updateProject({ client_email: emailInput.trim() || null });
+                toast("E-mail uložený.", "success");
+              }}
+            >
+              Uložiť e-mail
+            </Button>
+          </div>
         )}
       </div>
 
@@ -788,6 +989,62 @@ function ProjectDetail() {
                 ))}
               </ul>
             )}
+          </div>
+        )}
+      </div>
+
+      <div className="mb-8 animate-in rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/5 to-surface p-5">
+        <p className="text-sm font-medium">Spýtaj sa AI na tento web</p>
+        <p className="mb-4 text-xs text-muted">
+          Odpovie z histórie kontrol, auditov a expirácie — napr. „Prečo bol web
+          minulý týždeň pomalý?" alebo „Čo mám opraviť ako prvé?".
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Input
+            id="ai_question"
+            name="ai_question"
+            type="text"
+            placeholder="Napíš otázku…"
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") ask();
+            }}
+            className="min-w-[240px] flex-1"
+          />
+          <Button onClick={ask} disabled={asking || !question.trim()}>
+            {asking ? "Premýšľam…" : "Spýtať sa"}
+          </Button>
+        </div>
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {[
+            "Aký je celkový stav webu?",
+            "Boli nejaké výpadky?",
+            "Čo mám opraviť ako prvé?",
+          ].map((q) => (
+            <button
+              key={q}
+              onClick={() => {
+                setQuestion(q);
+                setAsking(true);
+                setAnswer(null);
+                askAssistant(id!, q)
+                  .then(setAnswer)
+                  .catch((e) =>
+                    toast(e instanceof Error ? e.message : "Zlyhalo.", "error"),
+                  )
+                  .finally(() => setAsking(false));
+              }}
+              disabled={asking}
+              className="rounded-full border border-border bg-surface px-3 py-1 text-xs text-muted transition-colors hover:border-primary/50 hover:text-foreground disabled:opacity-50"
+            >
+              {q}
+            </button>
+          ))}
+        </div>
+        {answer && (
+          <div className="mt-4 rounded-xl border border-border bg-surface p-4">
+            <Markdown text={answer} />
           </div>
         )}
       </div>
