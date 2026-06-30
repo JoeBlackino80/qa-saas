@@ -1104,7 +1104,7 @@ function ProjectDetail() {
                         ch.severity === "critical"
                           ? "bg-danger/10 text-danger"
                           : ch.severity === "warning"
-                            ? "bg-amber-500/10 text-amber-400"
+                            ? "bg-warn/10 text-warn"
                             : "bg-surface-2 text-foreground/80"
                       }`}
                     >

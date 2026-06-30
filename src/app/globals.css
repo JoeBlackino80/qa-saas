@@ -1,17 +1,17 @@
 @import "tailwindcss";
 
 :root {
-  --background: #09090b;
-  --surface: #131316;
-  --surface-2: #1b1b1f;
-  --border: #262629;
-  --foreground: #ededf0;
-  --muted: #8a8a93;
-  --primary: #6366f1;
-  --primary-hover: #5457e8;
-  --danger: #f87171;
-  --ok: #34d399;
-  --warn: #fbbf24;
+  --background: #f6f8fb;
+  --surface: #ffffff;
+  --surface-2: #f1f5f9;
+  --border: #e2e8f0;
+  --foreground: #0f172a;
+  --muted: #64748b;
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --danger: #dc2626;
+  --ok: #059669;
+  --warn: #d97706;
 }
 
 @theme inline {
@@ -31,17 +31,17 @@
 }
 
 html {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
-  /* Subtle depth — faint glow top-centre, like Linear/Vercel. */
+  /* Subtle depth — faint glow top-centre. */
   background-image: radial-gradient(
     60rem 40rem at 50% -10rem,
-    rgba(99, 102, 241, 0.06),
+    rgba(99, 102, 241, 0.07),
     transparent 70%
   );
   background-attachment: fixed;
