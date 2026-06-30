@@ -11,6 +11,7 @@ import { AlertSettings } from "./alert-settings";
 import { PushSettings } from "./push-settings";
 import { AccountSettings } from "./account-settings";
 import { ActionPlan } from "./action-plan";
+import { BrandingSettings } from "./branding-settings";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -103,6 +104,7 @@ export default function DashboardPage() {
         <div className="mb-6 flex flex-wrap items-start gap-4">
           <AlertSettings />
           <PushSettings />
+          <BrandingSettings />
           <AccountSettings />
         </div>
 

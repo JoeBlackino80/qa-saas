@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { fetchReport, type WeeklyReport } from "@/lib/report-client";
 import { Button } from "@/components/ui/button";
 import { Markdown } from "@/components/markdown";
+import { loadMyBranding, type Branding } from "@/lib/branding-client";
 import type { SecurityAudit } from "@/lib/security-client";
 import type { Project, QualityAudit } from "@/lib/types";
 
@@ -71,6 +72,7 @@ function ReportView() {
   const [sec, setSec] = useState<SecurityAudit | null>(null);
   const [qual, setQual] = useState<QualityAudit | null>(null);
   const [project, setProject] = useState<Project | null>(null);
+  const [branding, setBranding] = useState<Branding | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -88,8 +90,12 @@ function ReportView() {
         return;
       }
       try {
-        const [rep] = await Promise.all([fetchReport(id, d)]);
+        const [rep, brand] = await Promise.all([
+          fetchReport(id, d),
+          loadMyBranding(),
+        ]);
         setReport(rep);
+        setBranding(brand);
 
         const { data: proj } = await supabase
           .from("projects")
@@ -163,6 +169,9 @@ function ReportView() {
         })
     : [];
 
+  const brand = branding?.brand_color || "#4f46e5";
+  const agency = branding?.agency_name?.trim();
+
   return (
     <>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 print:hidden">
@@ -183,28 +192,45 @@ function ReportView() {
         <Button onClick={() => window.print()}>Stiahnuť PDF / Tlačiť</Button>
       </div>
 
-      <div className="rounded-2xl border border-border bg-surface p-8 print:border-0 print:bg-white print:p-0 print:text-black">
-        <div className="mb-6 flex items-start justify-between border-b border-border pb-6 print:border-zinc-300">
-          <div>
-            <p className="text-xs uppercase tracking-wide text-muted">
-              QA Agent — report stavu webu
-            </p>
-            <h1 className="mt-1 text-2xl font-semibold print:text-black">
-              {report.project.name}
-            </h1>
-            <p className="text-sm text-primary">{report.project.base_url}</p>
+      <div className="overflow-hidden rounded-2xl border border-border bg-surface print:border-0 print:bg-white print:text-black">
+        <div className="h-1.5 w-full" style={{ backgroundColor: brand }} />
+        <div className="p-8 print:p-0">
+          <div className="mb-6 flex items-start justify-between gap-4 border-b border-border pb-6 print:border-zinc-300">
+            <div className="flex items-center gap-3">
+              {branding?.logo_url && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={branding.logo_url}
+                  alt={agency ?? "logo"}
+                  className="h-12 w-12 shrink-0 rounded-lg border border-border object-contain print:border-zinc-300"
+                />
+              )}
+              <div>
+                <p
+                  className="text-xs font-semibold uppercase tracking-wide"
+                  style={{ color: brand }}
+                >
+                  {agency || "QA Agent"} — report stavu webu
+                </p>
+                <h1 className="mt-1 text-2xl font-semibold print:text-black">
+                  {report.project.name}
+                </h1>
+                <p className="text-sm" style={{ color: brand }}>
+                  {report.project.base_url}
+                </p>
+              </div>
+            </div>
+            <div className="shrink-0 text-right text-xs text-muted">
+              <p>Obdobie: posledných {report.days} dní</p>
+              <p>
+                {new Date(report.generatedAt).toLocaleDateString("sk-SK", {
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                })}
+              </p>
+            </div>
           </div>
-          <div className="text-right text-xs text-muted">
-            <p>Obdobie: posledných {report.days} dní</p>
-            <p>
-              {new Date(report.generatedAt).toLocaleDateString("sk-SK", {
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-              })}
-            </p>
-          </div>
-        </div>
 
         {overall !== null && (
           <div className="mb-6 flex break-inside-avoid items-center gap-5 rounded-2xl border border-border bg-surface-2 p-6 print:border-zinc-300 print:bg-white">
@@ -386,9 +412,12 @@ function ReportView() {
           </Section>
         )}
 
-        <p className="mt-6 text-center text-xs text-muted">
-          Vygenerované službou QA Agent · {report.project.base_url}
-        </p>
+          <p className="mt-6 text-center text-xs text-muted">
+            {agency
+              ? `Report pripravil(a) ${agency}${branding?.website_url ? ` · ${branding.website_url}` : ""}${branding?.contact_email ? ` · ${branding.contact_email}` : ""}`
+              : "Vygenerované službou QA Agent"}
+          </p>
+        </div>
       </div>
     </>
   );

@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { loadBranding, type Branding } from "@/lib/branding-client";
 import type { Check, Project } from "@/lib/types";
 
 function uptimeWithin(rows: Check[], ms: number): number | null {
@@ -17,6 +18,7 @@ function StatusView() {
   const params = useSearchParams();
   const id = params.get("id");
   const [project, setProject] = useState<Project | null>(null);
+  const [branding, setBranding] = useState<Branding | null>(null);
   const [rows, setRows] = useState<Check[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -29,11 +31,13 @@ function StatusView() {
     (async () => {
       const { data: proj } = await supabase
         .from("projects")
-        .select("id, name, base_url, created_at")
+        .select("id, name, base_url, created_at, user_id")
         .eq("id", id)
         .maybeSingle();
       setProject((proj as Project) ?? null);
       if (proj) {
+        const ownerId = (proj as { user_id?: string }).user_id;
+        if (ownerId) loadBranding(ownerId).then(setBranding);
         const { data: checks } = await supabase
           .from("checks")
           .select("id, status_code, ok, response_time_ms, error, created_at")
@@ -104,6 +108,8 @@ function StatusView() {
 
   const chart = [...rows].slice(0, 60).reverse();
   const maxMs = Math.max(1, ...times);
+  const brand = branding?.brand_color || "#4f46e5";
+  const agency = branding?.agency_name?.trim();
 
   const Period = ({ label, val }: { label: string; val: number | null }) => (
     <div className="rounded-2xl border border-border bg-surface p-5">
@@ -126,6 +132,24 @@ function StatusView() {
 
   return (
     <>
+      {(agency || branding?.logo_url) && (
+        <div className="mb-6 flex items-center gap-3 border-b border-border pb-5">
+          {branding?.logo_url && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={branding.logo_url}
+              alt={agency ?? "logo"}
+              className="h-9 w-9 rounded-lg border border-border object-contain"
+            />
+          )}
+          {agency && (
+            <span className="font-semibold" style={{ color: brand }}>
+              {agency}
+            </span>
+          )}
+        </div>
+      )}
+
       <div className="mb-8 flex items-center gap-4">
         <span className="relative flex h-3.5 w-3.5">
           {lastOnline && (
@@ -247,7 +271,9 @@ function StatusView() {
       )}
 
       <p className="text-center text-xs text-muted">
-        Status page · poháňa QA Agent
+        {agency
+          ? `Status stránka${branding?.website_url ? ` · ${branding.website_url}` : ""}`
+          : "Status page · poháňa QA Agent"}
       </p>
     </>
   );

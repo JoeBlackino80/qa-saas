@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/toaster";
 import { fixFor } from "@/lib/fixes";
+import { loadMyBranding } from "@/lib/branding-client";
 import type { SecurityFinding } from "@/lib/security-client";
 
 type Props = {
@@ -19,6 +20,7 @@ function compose(
   url: string,
   findings: SecurityFinding[],
   broken?: { url: string; status: number }[] | null,
+  signature?: { agency?: string | null; contact?: string | null },
 ): string {
   const order = { high: 0, medium: 1, low: 2, ok: 3 } as const;
   const issues = findings
@@ -55,8 +57,10 @@ function compose(
   lines.push(
     "Vopred ďakujem za úpravu. V prípade otázok ma kontaktujte.",
     "",
-    "S pozdravom",
+    "S pozdravom,",
   );
+  if (signature?.agency) lines.push(signature.agency);
+  if (signature?.contact) lines.push(signature.contact);
   return lines.join("\n");
 }
 
@@ -76,9 +80,18 @@ export function FixRequest({
   const subject = `Úprava webu ${projectName} — ${issueCount} ${issueCount === 1 ? "bod" : issueCount < 5 ? "body" : "bodov"} na opravu`;
   const [body, setBody] = useState("");
 
-  function openModal() {
-    setBody(compose(projectName, baseUrl, findings, brokenLinks));
+  async function openModal() {
     setOpen(true);
+    setBody(compose(projectName, baseUrl, findings, brokenLinks));
+    const brand = await loadMyBranding();
+    if (brand?.agency_name || brand?.contact_email) {
+      setBody(
+        compose(projectName, baseUrl, findings, brokenLinks, {
+          agency: brand?.agency_name,
+          contact: brand?.contact_email,
+        }),
+      );
+    }
   }
 
   if (issueCount === 0) return null;
