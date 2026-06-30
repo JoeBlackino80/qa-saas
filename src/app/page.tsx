@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Button } from "@/components/ui/button";
 
 const PAINS: { t: string; d: string }[] = [
   {
@@ -177,6 +176,46 @@ const PLANS: {
   },
 ];
 
+const ACCENTS = [
+  "bg-indigo-50 text-indigo-600",
+  "bg-emerald-50 text-emerald-600",
+  "bg-rose-50 text-rose-600",
+  "bg-amber-50 text-amber-600",
+  "bg-violet-50 text-violet-600",
+  "bg-sky-50 text-sky-600",
+];
+
+function FeatureIcon({ i }: { i: number }) {
+  const paths = [
+    "M3 12h4l2.5 7 4-15L16 12h5", // activity
+    "M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z M12 12.01", // eye (+ pupil)
+    "M12 3l7 3v5c0 4-3 7-7 8-4-1-7-4-7-8V6l7-3z M9 12l2 2 4-4", // shield-check
+    "M13 3L4 14h6l-1 7 9-11h-6l1-7z", // bolt
+    "M9 12l2 2 4-4 M12 3a9 9 0 100 18 9 9 0 000-18z", // check circle
+    "M6 3h9l5 5v13H6z M14 3v5h5 M9 13h6 M9 17h6", // document
+  ];
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-5 w-5"
+    >
+      {paths[i].split(" M").map((seg, k) => (
+        <path key={k} d={(k === 0 ? "" : "M") + seg} />
+      ))}
+    </svg>
+  );
+}
+
+const btnPrimary =
+  "inline-flex items-center justify-center rounded-xl bg-indigo-600 font-semibold text-white shadow-sm shadow-indigo-600/20 transition hover:bg-indigo-700";
+const btnSecondary =
+  "inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50";
+
 export default function Home() {
   const router = useRouter();
   const [ready, setReady] = useState(false);
@@ -192,293 +231,461 @@ export default function Home() {
 
   if (!ready) {
     return (
-      <main className="flex flex-1 items-center justify-center">
-        <p className="text-sm text-muted">Načítavam…</p>
+      <main className="flex min-h-screen flex-1 items-center justify-center bg-white">
+        <p className="text-sm text-slate-400">Načítavam…</p>
       </main>
     );
   }
 
   return (
-    <div className="flex flex-1 flex-col">
-      <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
+    <div className="min-h-screen bg-white text-slate-900 antialiased">
+      <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/80 backdrop-blur">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-3.5">
           <div className="flex items-center gap-2">
-            <span className="grid h-8 w-8 place-items-center rounded-lg bg-primary text-sm font-bold text-white">
+            <span className="grid h-8 w-8 place-items-center rounded-lg bg-indigo-600 text-sm font-bold text-white">
               QA
             </span>
-            <span className="font-semibold">QA Agent</span>
+            <span className="font-semibold tracking-tight">QA Agent</span>
           </div>
-          <div className="flex items-center gap-3">
-            <Link href="/login">
-              <Button variant="ghost">Prihlásiť sa</Button>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/login"
+              className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition hover:text-slate-900"
+            >
+              Prihlásiť sa
             </Link>
-            <Link href="/signup">
-              <Button>Registrácia</Button>
+            <Link href="/signup" className={`${btnPrimary} px-4 py-2 text-sm`}>
+              Registrácia
             </Link>
           </div>
         </div>
       </header>
 
-      <main className="flex-1">
+      <main>
         {/* Hero */}
-        <section className="mx-auto w-full max-w-3xl animate-in px-6 pt-24 pb-16 text-center">
-          <span className="inline-block rounded-full border border-border bg-surface px-3 py-1 text-xs text-muted">
-            Monitoring · Bezpečnosť · Výkon · Testy — s AI
-          </span>
-          <h1 className="mt-6 text-4xl font-semibold tracking-tight sm:text-5xl">
-            Tvoj web pod kontrolou 24 hodín denne
-          </h1>
-          <p className="mx-auto mt-5 max-w-xl text-lg text-muted">
-            QA Agent ti nepovie len že web spadol, ale aj{" "}
-            <span className="text-foreground">
-              čo presne sa pokazilo, kde je zraniteľný a ako to opraviť
-            </span>{" "}
-            — zrozumiteľne, s umelou inteligenciou, na jednom mieste.
-          </p>
-          <div className="mt-8 flex justify-center gap-3">
-            <Link href="/signup">
-              <Button className="px-6 py-3 text-base">Začať zadarmo</Button>
-            </Link>
-            <Link href="#funkcie">
-              <Button variant="ghost" className="px-6 py-3 text-base">
+        <section className="relative overflow-hidden">
+          {/* soft gradient blobs */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -top-32 left-1/2 h-[34rem] w-[60rem] -translate-x-1/2 rounded-full bg-gradient-to-br from-indigo-200/50 via-violet-200/40 to-sky-200/40 blur-3xl"
+          />
+          <div className="relative mx-auto w-full max-w-3xl animate-in px-6 pt-20 pb-12 text-center">
+            <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/70 px-3.5 py-1.5 text-xs font-medium text-slate-600 shadow-sm">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              Monitoring · Bezpečnosť · Výkon · Testy — s AI
+            </span>
+            <h1 className="mt-6 text-4xl font-bold leading-[1.1] tracking-tight text-slate-900 sm:text-6xl">
+              Tvoj web pod kontrolou
+              <span className="block bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
+                24 hodín denne
+              </span>
+            </h1>
+            <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-slate-600">
+              QA Agent ti nepovie len že web spadol, ale aj{" "}
+              <span className="font-medium text-slate-900">
+                čo presne sa pokazilo, kde je zraniteľný a ako to opraviť
+              </span>{" "}
+              — zrozumiteľne, s umelou inteligenciou, na jednom mieste.
+            </p>
+            <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+              <Link href="/signup" className={`${btnPrimary} px-6 py-3 text-base`}>
+                Začať zadarmo
+              </Link>
+              <Link
+                href="#funkcie"
+                className={`${btnSecondary} px-6 py-3 text-base`}
+              >
                 Ako to funguje
-              </Button>
-            </Link>
+              </Link>
+            </div>
+            <p className="mt-4 text-xs text-slate-500">
+              Bez inštalácie · bez karty · pridáš web a sledujeme za teba
+            </p>
           </div>
-          <p className="mt-4 text-xs text-muted">
-            Bez inštalácie · pridáš web a sledujeme za teba
-          </p>
+
+          {/* Product preview mock */}
+          <div className="relative mx-auto -mb-px w-full max-w-4xl px-6 pb-16">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl shadow-slate-300/40 sm:p-6">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div className="flex items-center gap-2.5">
+                  <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">
+                      eshop-klienta.sk
+                    </p>
+                    <p className="text-xs text-slate-400">
+                      posledná kontrola pred 3 min
+                    </p>
+                  </div>
+                </div>
+                <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-600">
+                  Všetko funguje
+                </span>
+              </div>
+              <div className="mt-5 grid gap-4 sm:grid-cols-[auto_1fr]">
+                <div className="flex items-center gap-4 rounded-xl bg-gradient-to-br from-emerald-50 to-white p-5 ring-1 ring-emerald-100">
+                  <span className="grid h-16 w-16 place-items-center rounded-2xl bg-white text-4xl font-bold text-emerald-600 shadow-sm">
+                    A
+                  </span>
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-slate-400">
+                      Celková známka
+                    </p>
+                    <p className="text-2xl font-bold text-slate-900">92/100</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    ["Dostupnosť", "99,9 %", "text-emerald-600"],
+                    ["Bezpečnosť", "A", "text-emerald-600"],
+                    ["Výkon", "90", "text-emerald-600"],
+                  ].map(([l, v, c]) => (
+                    <div
+                      key={l}
+                      className="rounded-xl border border-slate-100 bg-slate-50/60 p-4"
+                    >
+                      <p className="text-[11px] uppercase tracking-wide text-slate-400">
+                        {l}
+                      </p>
+                      <p className={`mt-1 text-xl font-bold ${c}`}>{v}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="mt-4 flex items-end gap-1">
+                {Array.from({ length: 45 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className={`h-7 flex-1 rounded-sm ${
+                      i === 18 || i === 31 ? "bg-rose-400" : "bg-emerald-400/80"
+                    }`}
+                  />
+                ))}
+              </div>
+              <p className="mt-2 text-[11px] text-slate-400">
+                Uptime za posledných 45 dní
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Value strip */}
+        <section className="border-y border-slate-200 bg-slate-50">
+          <div className="mx-auto grid w-full max-w-6xl grid-cols-2 gap-6 px-6 py-8 sm:grid-cols-4">
+            {[
+              ["6", "nástrojov v jednej appke"],
+              ["15 min", "interval kontroly webu"],
+              ["A–F", "jasná známka, žiadny žargón"],
+              ["AI", "vysvetlí a poradí po slovensky"],
+            ].map(([big, small]) => (
+              <div key={small} className="text-center">
+                <p className="text-2xl font-bold text-indigo-600">{big}</p>
+                <p className="mt-1 text-sm text-slate-500">{small}</p>
+              </div>
+            ))}
+          </div>
         </section>
 
         {/* Pains */}
-        <section className="border-y border-border bg-surface/40">
-          <div className="mx-auto w-full max-w-6xl px-6 py-16">
-            <h2 className="text-center text-2xl font-semibold tracking-tight">
+        <section className="mx-auto w-full max-w-6xl px-6 py-20">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="text-3xl font-bold tracking-tight">
               Toto sa deje, keď web nikto nestráži
             </h2>
-            <div className="mt-10 grid gap-4 md:grid-cols-3">
-              {PAINS.map((p) => (
-                <div
-                  key={p.t}
-                  className="rounded-2xl border border-border bg-surface p-6"
-                >
-                  <h3 className="font-medium text-danger">{p.t}</h3>
-                  <p className="mt-2 text-sm text-muted">{p.d}</p>
-                </div>
-              ))}
-            </div>
-            <p className="mx-auto mt-8 max-w-xl text-center text-muted">
-              QA Agent tieto problémy <span className="text-foreground">zachytí ako prvý</span> a
-              povie ti presne, čo s tým.
+            <p className="mt-3 text-slate-600">
+              Tiché chyby, ktoré stoja zákazníkov skôr, než si ich všimneš.
             </p>
           </div>
+          <div className="mt-12 grid gap-5 md:grid-cols-3">
+            {PAINS.map((p) => (
+              <div
+                key={p.t}
+                className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+              >
+                <span className="grid h-9 w-9 place-items-center rounded-lg bg-rose-50 text-rose-600">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.7"
+                    strokeLinecap="round"
+                    className="h-5 w-5"
+                  >
+                    <path d="M12 9v4M12 17h.01M10.3 4.3 2.6 18a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 4.3a2 2 0 0 0-3.4 0z" />
+                  </svg>
+                </span>
+                <h3 className="mt-4 font-semibold text-slate-900">{p.t}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                  {p.d}
+                </p>
+              </div>
+            ))}
+          </div>
+          <p className="mx-auto mt-10 max-w-xl text-center text-slate-600">
+            QA Agent tieto problémy{" "}
+            <span className="font-semibold text-slate-900">zachytí ako prvý</span>{" "}
+            a povie ti presne, čo s tým.
+          </p>
         </section>
 
         {/* Features */}
-        <section id="funkcie" className="mx-auto w-full max-w-6xl px-6 py-20">
-          <h2 className="text-center text-2xl font-semibold tracking-tight">
-            Všetko, čo potrebuješ na zdravý web
-          </h2>
-          <p className="mx-auto mt-3 max-w-xl text-center text-muted">
-            Šesť nástrojov v jednom — namiesto piatich rôznych služieb a
-            mesačných poplatkov.
-          </p>
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {FEATURES.map((f) => (
-              <button
-                key={f.t}
-                onClick={() => setOpenFeature(f)}
-                className="rounded-2xl border border-border bg-surface p-6 text-left transition-colors hover:border-primary/40"
-              >
-                <h3 className="font-medium">{f.t}</h3>
-                <p className="mt-2 text-sm text-muted">{f.d}</p>
-                <span className="mt-3 inline-block text-sm font-medium text-primary">
-                  Zistiť viac →
-                </span>
-              </button>
-            ))}
+        <section id="funkcie" className="border-y border-slate-200 bg-slate-50">
+          <div className="mx-auto w-full max-w-6xl px-6 py-20">
+            <div className="mx-auto max-w-2xl text-center">
+              <h2 className="text-3xl font-bold tracking-tight">
+                Všetko, čo potrebuješ na zdravý web
+              </h2>
+              <p className="mt-3 text-slate-600">
+                Šesť nástrojov v jednom — namiesto piatich rôznych služieb a
+                mesačných poplatkov.
+              </p>
+            </div>
+            <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {FEATURES.map((f, i) => (
+                <button
+                  key={f.t}
+                  onClick={() => setOpenFeature(f)}
+                  className="group rounded-2xl border border-slate-200 bg-white p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-md"
+                >
+                  <span
+                    className={`grid h-11 w-11 place-items-center rounded-xl ${ACCENTS[i % ACCENTS.length]}`}
+                  >
+                    <FeatureIcon i={i} />
+                  </span>
+                  <h3 className="mt-4 font-semibold text-slate-900">{f.t}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                    {f.d}
+                  </p>
+                  <span className="mt-3 inline-block text-sm font-semibold text-indigo-600 transition group-hover:translate-x-0.5">
+                    Zistiť viac →
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
         </section>
 
         {/* For whom */}
-        <section className="border-y border-border bg-surface/40">
-          <div className="mx-auto w-full max-w-6xl px-6 py-20">
-            <h2 className="text-center text-2xl font-semibold tracking-tight">
+        <section className="mx-auto w-full max-w-6xl px-6 py-20">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="text-3xl font-bold tracking-tight">
               Pre koho je QA Agent
             </h2>
-            <div className="mt-10 grid gap-4 md:grid-cols-3">
-              {FOR_WHOM.map((f) => (
-                <div
-                  key={f.t}
-                  className="rounded-2xl border border-border bg-surface p-6"
-                >
-                  <h3 className="font-medium">{f.t}</h3>
-                  <p className="mt-2 text-sm text-muted">{f.d}</p>
-                </div>
-              ))}
-            </div>
+          </div>
+          <div className="mt-12 grid gap-5 md:grid-cols-3">
+            {FOR_WHOM.map((f) => (
+              <div
+                key={f.t}
+                className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+              >
+                <h3 className="font-semibold text-slate-900">{f.t}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                  {f.d}
+                </p>
+              </div>
+            ))}
           </div>
         </section>
 
         {/* How it works */}
-        <section className="mx-auto w-full max-w-5xl px-6 py-20">
-          <h2 className="text-center text-2xl font-semibold tracking-tight">
-            Ako to funguje
-          </h2>
-          <div className="mt-10 grid gap-4 md:grid-cols-3">
-            {STEPS.map((s) => (
-              <div
-                key={s.n}
-                className="rounded-2xl border border-border bg-surface p-6"
-              >
-                <span className="tabular grid h-9 w-9 place-items-center rounded-full bg-primary/15 text-sm font-bold text-primary">
-                  {s.n}
-                </span>
-                <h3 className="mt-4 font-medium">{s.t}</h3>
-                <p className="mt-2 text-sm text-muted">{s.d}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Why us */}
-        <section className="border-y border-border bg-surface/40">
-          <div className="mx-auto w-full max-w-3xl px-6 py-20 text-center">
-            <h2 className="text-2xl font-semibold tracking-tight">
-              Prečo QA Agent
-            </h2>
-            <div className="mt-8 grid gap-6 text-left sm:grid-cols-2">
-              <div>
-                <h3 className="font-medium">Vysvetlí to ľudsky</h3>
-                <p className="mt-1 text-sm text-muted">
-                  Žiadne tabuľky plné čísel. AI ti povie po slovensky, čo
-                  problém znamená a čo opraviť ako prvé.
-                </p>
-              </div>
-              <div>
-                <h3 className="font-medium">Všetko na jednom mieste</h3>
-                <p className="mt-1 text-sm text-muted">
-                  Dostupnosť, bezpečnosť, výkon aj testy v jednej appke —
-                  nemusíš platiť päť rôznych nástrojov.
-                </p>
-              </div>
-              <div>
-                <h3 className="font-medium">Nájde, čo iní prehliadnu</h3>
-                <p className="mt-1 text-sm text-muted">
-                  Zmiznutý formulár, rozbitý certifikát, pomalá stránka — chyby,
-                  ktoré stoja zákazníkov.
-                </p>
-              </div>
-              <div>
-                <h3 className="font-medium">Pripravené pre klientov</h3>
-                <p className="mt-1 text-sm text-muted">
-                  Profesionálne reporty a status page, ktoré môžeš poslať
-                  priamo klientovi.
-                </p>
-              </div>
+        <section className="border-y border-slate-200 bg-slate-50">
+          <div className="mx-auto w-full max-w-5xl px-6 py-20">
+            <div className="mx-auto max-w-2xl text-center">
+              <h2 className="text-3xl font-bold tracking-tight">Ako to funguje</h2>
+              <p className="mt-3 text-slate-600">Tri kroky, dve minúty.</p>
             </div>
-          </div>
-        </section>
-
-        {/* Pricing */}
-        <section className="mx-auto w-full max-w-6xl px-6 py-20">
-          <h2 className="text-center text-2xl font-semibold tracking-tight">
-            Jednoduchý cenník
-          </h2>
-          <p className="mx-auto mt-3 max-w-xl text-center text-muted">
-            Začni zadarmo. Plať, až keď ti to prinesie hodnotu.
-          </p>
-          <div className="mt-10 grid gap-4 md:grid-cols-3">
-            {PLANS.map((p) => (
-              <div
-                key={p.name}
-                className={`rounded-2xl border p-6 ${
-                  p.highlight
-                    ? "border-primary bg-surface shadow-lg shadow-primary/10"
-                    : "border-border bg-surface"
-                }`}
-              >
-                {p.highlight && (
-                  <span className="mb-3 inline-block rounded-full bg-primary/15 px-2.5 py-0.5 text-xs font-medium text-primary">
-                    Najpopulárnejší
-                  </span>
-                )}
-                <p className="text-sm font-medium text-muted">{p.name}</p>
-                <p className="mt-2">
-                  <span className="tabular text-3xl font-semibold">
-                    {p.price}
-                  </span>{" "}
-                  <span className="text-sm text-muted">{p.note}</span>
-                </p>
-                <ul className="mt-5 flex flex-col gap-2 text-sm text-foreground/80">
-                  {p.items.map((it) => (
-                    <li key={it} className="flex gap-2">
-                      <span className="text-primary">•</span>
-                      {it}
-                    </li>
-                  ))}
-                </ul>
-                <Link href="/signup" className="mt-6 block">
-                  <Button
-                    variant={p.highlight ? "primary" : "ghost"}
-                    className="w-full"
-                  >
-                    Vybrať {p.name}
-                  </Button>
-                </Link>
-              </div>
-            ))}
-          </div>
-          <p className="mt-4 text-center text-xs text-muted">
-            Ceny sú orientačné — fakturácia (Stripe) pribudne čoskoro.
-          </p>
-        </section>
-
-        {/* FAQ */}
-        <section className="border-t border-border">
-          <div className="mx-auto w-full max-w-3xl px-6 py-20">
-            <h2 className="text-center text-2xl font-semibold tracking-tight">
-              Časté otázky
-            </h2>
-            <div className="mt-10 flex flex-col gap-4">
-              {FAQ.map((f) => (
+            <div className="mt-12 grid gap-5 md:grid-cols-3">
+              {STEPS.map((s) => (
                 <div
-                  key={f.q}
-                  className="rounded-2xl border border-border bg-surface p-6"
+                  key={s.n}
+                  className="relative rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
                 >
-                  <h3 className="font-medium">{f.q}</h3>
-                  <p className="mt-2 text-sm text-muted">{f.a}</p>
+                  <span className="grid h-10 w-10 place-items-center rounded-full bg-indigo-600 text-sm font-bold text-white">
+                    {s.n}
+                  </span>
+                  <h3 className="mt-4 font-semibold text-slate-900">{s.t}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                    {s.d}
+                  </p>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
+        {/* Why us */}
+        <section className="mx-auto w-full max-w-4xl px-6 py-20">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="text-3xl font-bold tracking-tight">Prečo QA Agent</h2>
+          </div>
+          <div className="mt-12 grid gap-x-10 gap-y-8 sm:grid-cols-2">
+            {[
+              [
+                "Vysvetlí to ľudsky",
+                "Žiadne tabuľky plné čísel. AI ti povie po slovensky, čo problém znamená a čo opraviť ako prvé.",
+              ],
+              [
+                "Všetko na jednom mieste",
+                "Dostupnosť, bezpečnosť, výkon aj testy v jednej appke — nemusíš platiť päť rôznych nástrojov.",
+              ],
+              [
+                "Nájde, čo iní prehliadnu",
+                "Zmiznutý formulár, rozbitý certifikát, pomalá stránka — chyby, ktoré stoja zákazníkov.",
+              ],
+              [
+                "Pripravené pre klientov",
+                "Profesionálne reporty a status page, ktoré môžeš poslať priamo klientovi.",
+              ],
+            ].map(([t, d]) => (
+              <div key={t} className="flex gap-3.5">
+                <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-emerald-50 text-emerald-600">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="h-3.5 w-3.5"
+                  >
+                    <path d="M5 12l4 4 10-10" />
+                  </svg>
+                </span>
+                <div>
+                  <h3 className="font-semibold text-slate-900">{t}</h3>
+                  <p className="mt-1 text-sm leading-relaxed text-slate-600">
+                    {d}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Pricing */}
+        <section className="border-y border-slate-200 bg-slate-50">
+          <div className="mx-auto w-full max-w-6xl px-6 py-20">
+            <div className="mx-auto max-w-2xl text-center">
+              <h2 className="text-3xl font-bold tracking-tight">
+                Jednoduchý cenník
+              </h2>
+              <p className="mt-3 text-slate-600">
+                Začni zadarmo. Plať, až keď ti to prinesie hodnotu.
+              </p>
+            </div>
+            <div className="mt-12 grid items-start gap-5 md:grid-cols-3">
+              {PLANS.map((p) => (
+                <div
+                  key={p.name}
+                  className={`rounded-2xl p-6 ${
+                    p.highlight
+                      ? "border-2 border-indigo-600 bg-white shadow-xl shadow-indigo-600/10 md:-translate-y-2"
+                      : "border border-slate-200 bg-white shadow-sm"
+                  }`}
+                >
+                  {p.highlight && (
+                    <span className="mb-3 inline-block rounded-full bg-indigo-600 px-2.5 py-0.5 text-xs font-semibold text-white">
+                      Najpopulárnejší
+                    </span>
+                  )}
+                  <p className="text-sm font-semibold text-slate-500">
+                    {p.name}
+                  </p>
+                  <p className="mt-2">
+                    <span className="text-4xl font-bold tracking-tight text-slate-900">
+                      {p.price}
+                    </span>{" "}
+                    <span className="text-sm text-slate-500">{p.note}</span>
+                  </p>
+                  <ul className="mt-6 flex flex-col gap-2.5 text-sm text-slate-700">
+                    {p.items.map((it) => (
+                      <li key={it} className="flex gap-2.5">
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="mt-0.5 h-4 w-4 shrink-0 text-indigo-600"
+                        >
+                          <path d="M5 12l4 4 10-10" />
+                        </svg>
+                        {it}
+                      </li>
+                    ))}
+                  </ul>
+                  <Link
+                    href="/signup"
+                    className={`mt-7 block w-full px-4 py-2.5 text-center text-sm ${
+                      p.highlight ? btnPrimary : btnSecondary
+                    }`}
+                  >
+                    Vybrať {p.name}
+                  </Link>
+                </div>
+              ))}
+            </div>
+            <p className="mt-6 text-center text-xs text-slate-500">
+              Ceny sú orientačné — fakturácia (Stripe) pribudne čoskoro.
+            </p>
+          </div>
+        </section>
+
+        {/* FAQ */}
+        <section className="mx-auto w-full max-w-3xl px-6 py-20">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="text-3xl font-bold tracking-tight">Časté otázky</h2>
+          </div>
+          <div className="mt-12 flex flex-col gap-4">
+            {FAQ.map((f) => (
+              <div
+                key={f.q}
+                className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+              >
+                <h3 className="font-semibold text-slate-900">{f.q}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                  {f.a}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+
         {/* Final CTA */}
-        <section className="mx-auto w-full max-w-3xl px-6 py-20 text-center">
-          <h2 className="text-3xl font-semibold tracking-tight">
-            Začni sledovať svoj web ešte dnes
-          </h2>
-          <p className="mx-auto mt-4 max-w-lg text-muted">
-            Registrácia za minútu, bez karty. Pridaj prvý web a hneď uvidíš jeho
-            stav, bezpečnosť aj rýchlosť.
-          </p>
-          <div className="mt-8">
-            <Link href="/signup">
-              <Button className="px-8 py-3 text-base">Vytvoriť účet zadarmo</Button>
-            </Link>
+        <section className="px-6 pb-20">
+          <div className="relative mx-auto w-full max-w-5xl overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 to-violet-600 px-6 py-16 text-center shadow-xl">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-white/10 blur-2xl"
+            />
+            <h2 className="relative text-3xl font-bold tracking-tight text-white">
+              Začni sledovať svoj web ešte dnes
+            </h2>
+            <p className="relative mx-auto mt-4 max-w-lg text-indigo-100">
+              Registrácia za minútu, bez karty. Pridaj prvý web a hneď uvidíš
+              jeho stav, bezpečnosť aj rýchlosť.
+            </p>
+            <div className="relative mt-8">
+              <Link
+                href="/signup"
+                className="inline-flex items-center justify-center rounded-xl bg-white px-8 py-3 text-base font-semibold text-indigo-700 shadow-sm transition hover:bg-indigo-50"
+              >
+                Vytvoriť účet zadarmo
+              </Link>
+            </div>
           </div>
         </section>
       </main>
 
-      <footer className="border-t border-border">
-        <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-between gap-3 px-6 py-8 text-sm text-muted sm:flex-row">
+      <footer className="border-t border-slate-200 bg-white">
+        <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-between gap-3 px-6 py-8 text-sm text-slate-500 sm:flex-row">
           <span>QA Agent — web quality, security &amp; performance</span>
-          <div className="flex gap-4">
-            <Link href="/login" className="hover:text-foreground">
+          <div className="flex gap-5">
+            <Link href="/login" className="hover:text-slate-900">
               Prihlásiť sa
             </Link>
-            <Link href="/signup" className="hover:text-foreground">
+            <Link href="/signup" className="hover:text-slate-900">
               Registrácia
             </Link>
           </div>
@@ -487,41 +694,46 @@ export default function Home() {
 
       {openFeature && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm"
           onClick={() => setOpenFeature(null)}
         >
           <div
-            className="w-full max-w-lg animate-in rounded-2xl border border-border bg-surface p-7 shadow-xl"
+            className="w-full max-w-lg animate-in rounded-2xl border border-slate-200 bg-white p-7 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-3 flex items-start justify-between gap-4">
-              <h3 className="text-lg font-semibold">{openFeature.t}</h3>
+              <h3 className="text-lg font-semibold text-slate-900">
+                {openFeature.t}
+              </h3>
               <button
                 onClick={() => setOpenFeature(null)}
-                className="text-muted hover:text-foreground"
+                className="text-slate-400 transition hover:text-slate-900"
                 aria-label="Zavrieť"
               >
                 ✕
               </button>
             </div>
-            <p className="text-sm leading-relaxed text-foreground/80">
+            <p className="text-sm leading-relaxed text-slate-600">
               {openFeature.long}
             </p>
-            <div className="mt-5 rounded-xl border border-border bg-surface-2 p-4">
-              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted">
+            <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
                 Ukážka
               </p>
               <ul className="flex flex-col gap-1.5">
                 {openFeature.example.map((e, i) => (
-                  <li key={i} className="flex gap-2 text-sm text-foreground/80">
-                    <span className="text-primary">•</span>
+                  <li key={i} className="flex gap-2 text-sm text-slate-700">
+                    <span className="text-indigo-600">•</span>
                     {e}
                   </li>
                 ))}
               </ul>
             </div>
-            <Link href="/signup" className="mt-6 block">
-              <Button className="w-full">Vyskúšať zadarmo</Button>
+            <Link
+              href="/signup"
+              className={`mt-6 block w-full px-4 py-2.5 text-center text-sm ${btnPrimary}`}
+            >
+              Vyskúšať zadarmo
             </Link>
           </div>
         </div>
