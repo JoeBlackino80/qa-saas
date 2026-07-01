@@ -8,6 +8,7 @@ import { triggerCheck } from "@/lib/run-check-client";
 import {
   runSecurityAudit,
   runQualityAudit,
+  runGdprAudit,
   triggerTests,
   type SecurityAudit,
 } from "@/lib/security-client";
@@ -37,10 +38,15 @@ function ProjectDetail() {
   const [quality, setQuality] = useState<QualityAudit | null>(null);
   const [qRunning, setQRunning] = useState(false);
   const [qError, setQError] = useState<string | null>(null);
+  const [gdpr, setGdpr] = useState<SecurityAudit | null>(null);
+  const [gdprRunning, setGdprRunning] = useState(false);
+  const [gdprError, setGdprError] = useState<string | null>(null);
   const [secPrev, setSecPrev] = useState<number | null>(null);
   const [qualPrev, setQualPrev] = useState<number | null>(null);
+  const [gdprPrev, setGdprPrev] = useState<number | null>(null);
   const [secTrend, setSecTrend] = useState<number[]>([]);
   const [qualTrend, setQualTrend] = useState<number[]>([]);
+  const [gdprTrend, setGdprTrend] = useState<number[]>([]);
   const [openFix, setOpenFix] = useState<number | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -51,7 +57,8 @@ function ProjectDetail() {
   const [asking, setAsking] = useState(false);
   const [emailInput, setEmailInput] = useState("");
 
-  const busyAny = running || auditing || qRunning || runningAll;
+  const busyAny =
+    running || auditing || qRunning || gdprRunning || runningAll;
 
   async function runAll() {
     if (!id) return;
@@ -65,6 +72,9 @@ function ProjectDetail() {
       try {
         const q = await runQualityAudit(id);
         setQuality(q as QualityAudit);
+      } catch { /* keep going */ }
+      try {
+        setGdpr(await runGdprAudit(id));
       } catch { /* keep going */ }
       try {
         await triggerTests();
@@ -136,6 +146,17 @@ function ProjectDetail() {
     setQualPrev(qRows[1]?.performance ?? null);
     setQualTrend([...qRows].reverse().map((a) => a.performance ?? 0));
 
+    const { data: g } = await supabase
+      .from("gdpr_audits")
+      .select("grade, score, findings, ai_summary, created_at")
+      .eq("project_id", id)
+      .order("created_at", { ascending: false })
+      .limit(20);
+    const gRows = (g ?? []) as SecurityAudit[];
+    setGdpr(gRows[0] ?? null);
+    setGdprPrev(gRows[1]?.score ?? null);
+    setGdprTrend([...gRows].reverse().map((a) => a.score));
+
     setLoading(false);
   }, [id, router]);
 
@@ -193,6 +214,22 @@ function ProjectDetail() {
       toast(m, "error");
     } finally {
       setAuditing(false);
+    }
+  }
+
+  async function runGdpr() {
+    if (!id) return;
+    setGdprRunning(true);
+    setGdprError(null);
+    try {
+      setGdpr(await runGdprAudit(id));
+      toast("GDPR audit dokončený.", "success");
+    } catch (e) {
+      const m = e instanceof Error ? e.message : "Audit zlyhal.";
+      setGdprError(m);
+      toast(m, "error");
+    } finally {
+      setGdprRunning(false);
     }
   }
 
@@ -319,7 +356,8 @@ function ProjectDetail() {
       )
     : null;
   const secScore = audit?.score ?? null;
-  const overallParts = [uptime, secScore, perfAvg].filter(
+  const gdprScore = gdpr?.score ?? null;
+  const overallParts = [uptime, secScore, perfAvg, gdprScore].filter(
     (x): x is number => x !== null,
   );
   const overall = overallParts.length
@@ -433,6 +471,9 @@ function ProjectDetail() {
         <Button variant="ghost" onClick={runQuality} disabled={busyAny}>
           {qRunning ? "Analyzujem…" : "Audit výkonu"}
         </Button>
+        <Button variant="ghost" onClick={runGdpr} disabled={busyAny}>
+          {gdprRunning ? "Analyzujem…" : "GDPR audit"}
+        </Button>
         <Link href={`/tests?id=${project.id}`}>
           <Button variant="ghost">Testy</Button>
         </Link>
@@ -477,6 +518,14 @@ function ProjectDetail() {
               </p>
               <p className="tabular mt-0.5 font-semibold">
                 {perfAvg !== null ? `${perfAvg}/100` : "—"}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted">
+                GDPR
+              </p>
+              <p className="tabular mt-0.5 font-semibold">
+                {gdprScore !== null ? `${gdprScore}/100` : "—"}
               </p>
             </div>
           </div>
@@ -919,6 +968,149 @@ function ProjectDetail() {
                   AI zhrnutie
                 </p>
                 <Markdown text={audit.ai_summary} />
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="mb-8 animate-in rounded-2xl border border-border bg-surface p-5">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-medium">GDPR &amp; cookies</p>
+            <p className="text-xs text-muted">
+              Súlad s ochranou údajov — cookie lišta, sledovacie skripty pred
+              súhlasom, zásady ochrany údajov. Pasívna analýza.
+            </p>
+          </div>
+          <Button variant="ghost" onClick={runGdpr} disabled={busyAny}>
+            {gdprRunning ? "Analyzujem…" : "Spustiť GDPR audit"}
+          </Button>
+        </div>
+        {gdprError && <p className="mb-3 text-sm text-danger">{gdprError}</p>}
+        {!gdpr && !gdprError && (
+          <p className="text-sm text-muted">Audit ešte nebol spustený.</p>
+        )}
+        {gdpr && (
+          <div className="flex flex-col gap-5">
+            <div className="flex flex-wrap items-center gap-4">
+              <span
+                className={`grid h-14 w-14 place-items-center rounded-xl text-2xl font-bold ${
+                  ["A", "B"].includes(gdpr.grade)
+                    ? "bg-ok/15 text-ok"
+                    : gdpr.grade === "C"
+                      ? "bg-warn/15 text-warn"
+                      : "bg-danger/15 text-danger"
+                }`}
+              >
+                {gdpr.grade}
+              </span>
+              <div>
+                <p className="tabular text-lg font-semibold">
+                  {gdpr.score}/100
+                </p>
+                <p className="text-xs text-muted">skóre súladu</p>
+                <Delta now={gdpr.score} prev={gdprPrev} />
+              </div>
+              {gdprTrend.length > 1 && (
+                <div className="hidden sm:block">
+                  <p className="mb-1 text-xs text-muted">trend</p>
+                  <Sparkline data={gdprTrend} />
+                </div>
+              )}
+              {gdpr.created_at && (
+                <p className="tabular ml-auto text-xs text-muted">
+                  {new Date(gdpr.created_at).toLocaleString("sk-SK")}
+                </p>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-2">
+              {[...gdpr.findings]
+                .filter((f) => f.severity !== "ok")
+                .sort((a, b) => {
+                  const o = { high: 0, medium: 1, low: 2, ok: 3 };
+                  return o[a.severity] - o[b.severity];
+                })
+                .map((f, i) => {
+                  const label =
+                    f.severity === "high"
+                      ? "Vysoké"
+                      : f.severity === "medium"
+                        ? "Stredné"
+                        : "Nízke";
+                  const pill =
+                    f.severity === "high"
+                      ? "bg-danger/15 text-danger"
+                      : f.severity === "medium"
+                        ? "bg-warn/15 text-warn"
+                        : "bg-surface-2 text-muted";
+                  const accent =
+                    f.severity === "high"
+                      ? "border-l-danger"
+                      : f.severity === "medium"
+                        ? "border-l-warn"
+                        : "border-l-border";
+                  return (
+                    <div
+                      key={i}
+                      className={`rounded-xl border border-border border-l-[3px] bg-surface p-3.5 ${accent}`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <span
+                          className={`mt-0.5 shrink-0 rounded-md px-2 py-0.5 text-[11px] font-semibold ${pill}`}
+                        >
+                          {label}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold text-foreground">
+                            {f.title}
+                          </p>
+                          <p className="mt-0.5 text-sm text-muted">
+                            {f.detail}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+              {(() => {
+                const oks = gdpr.findings.filter((f) => f.severity === "ok");
+                if (oks.length === 0) return null;
+                return (
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    {oks.map((f, i) => (
+                      <span
+                        key={i}
+                        title={f.detail}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-ok/10 px-2.5 py-1 text-xs font-medium text-ok"
+                      >
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.4"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="h-3 w-3"
+                        >
+                          <path d="M5 12l4 4 10-10" />
+                        </svg>
+                        {f.title}
+                      </span>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+
+            {gdpr.ai_summary && (
+              <div className="rounded-lg border border-border bg-surface-2 p-4">
+                <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted">
+                  AI zhrnutie
+                </p>
+                <Markdown text={gdpr.ai_summary} />
               </div>
             )}
           </div>

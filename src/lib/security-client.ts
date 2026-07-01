@@ -45,6 +45,13 @@ export async function runQualityAudit(projectId: string) {
   return await callFn(QUALITY_URL, projectId);
 }
 
+const GDPR_URL = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/gdpr-audit`;
+
+export async function runGdprAudit(projectId: string): Promise<SecurityAudit> {
+  const d = await callFn(GDPR_URL, projectId);
+  return { ...d, created_at: d.created_at ?? d.generatedAt } as SecurityAudit;
+}
+
 const TRIGGER_URL = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/trigger-tests`;
 
 export async function triggerTests(): Promise<void> {
