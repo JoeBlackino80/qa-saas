@@ -70,6 +70,7 @@ function ReportView() {
   const [days, setDays] = useState(30);
   const [report, setReport] = useState<WeeklyReport | null>(null);
   const [sec, setSec] = useState<SecurityAudit | null>(null);
+  const [gdpr, setGdpr] = useState<SecurityAudit | null>(null);
   const [qual, setQual] = useState<QualityAudit | null>(null);
   const [project, setProject] = useState<Project | null>(null);
   const [branding, setBranding] = useState<Branding | null>(null);
@@ -113,6 +114,15 @@ function ReportView() {
           .maybeSingle();
         setSec((s as SecurityAudit) ?? null);
 
+        const { data: gd } = await supabase
+          .from("gdpr_audits")
+          .select("grade, score, findings, ai_summary, created_at")
+          .eq("project_id", id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        setGdpr((gd as SecurityAudit) ?? null);
+
         const { data: q } = await supabase
           .from("quality_audits")
           .select(
@@ -151,9 +161,18 @@ function ReportView() {
       )
     : null;
   const secScore = sec?.score ?? null;
-  const parts = [s.uptimePercent, secScore, perfAvg].filter(
+  const gdprScore = gdpr?.score ?? null;
+  const parts = [s.uptimePercent, secScore, perfAvg, gdprScore].filter(
     (x): x is number => x !== null && x !== undefined,
   );
+  const gdprIssues = gdpr
+    ? [...gdpr.findings]
+        .filter((f) => f.severity !== "ok")
+        .sort((a, b) => {
+          const o = { high: 0, medium: 1, low: 2, ok: 3 };
+          return o[a.severity] - o[b.severity];
+        })
+    : [];
   const overall = parts.length
     ? Math.round(parts.reduce((a, b) => a + b, 0) / parts.length)
     : null;
@@ -296,6 +315,59 @@ function ReportView() {
             {issues.length > 0 && (
               <ul className="mt-4 flex flex-col gap-1.5 text-sm">
                 {issues.slice(0, 10).map((f, i) => (
+                  <li key={i} className="flex items-start gap-2">
+                    <span
+                      className={`mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ${
+                        f.severity === "high"
+                          ? "bg-danger/15 text-danger"
+                          : f.severity === "medium"
+                            ? "bg-warn/15 text-warn"
+                            : "bg-surface text-muted print:bg-white"
+                      }`}
+                    >
+                      {f.severity}
+                    </span>
+                    <span className="text-foreground/80 print:text-black">
+                      <span className="font-medium print:text-black">
+                        {f.title}
+                      </span>{" "}
+                      — {f.detail}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Section>
+        )}
+
+        {gdpr && (
+          <Section title="GDPR a cookies">
+            <div className="flex flex-wrap items-center gap-4">
+              <span
+                className={`grid h-14 w-14 place-items-center rounded-xl text-2xl font-bold print:bg-white ${
+                  ["A", "B"].includes(gdpr.grade)
+                    ? "bg-ok/15 text-ok"
+                    : gdpr.grade === "C"
+                      ? "bg-warn/15 text-warn"
+                      : "bg-danger/15 text-danger"
+                }`}
+              >
+                {gdpr.grade}
+              </span>
+              <div>
+                <p className="tabular text-lg font-semibold print:text-black">
+                  {gdpr.score}/100
+                </p>
+                <p className="text-xs text-muted">
+                  {gdprIssues.length === 0
+                    ? "Bez zistených nedostatkov"
+                    : `${gdprIssues.length} ${gdprIssues.length === 1 ? "nedostatok" : gdprIssues.length < 5 ? "nedostatky" : "nedostatkov"} na doriešenie`}
+                </p>
+              </div>
+            </div>
+            {gdprIssues.length > 0 && (
+              <ul className="mt-4 flex flex-col gap-1.5 text-sm">
+                {gdprIssues.slice(0, 10).map((f, i) => (
                   <li key={i} className="flex items-start gap-2">
                     <span
                       className={`mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ${
